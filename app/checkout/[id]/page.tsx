@@ -1,17 +1,15 @@
-import { notFound } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import {
+  notFound,
+} from "next/navigation";
+
+import {
+  supabase,
+} from "@/lib/supabase";
+
 import CheckoutClient from "./CheckoutClient";
 
 type Club = {
   name: string;
-};
-
-type VipOffer = {
-  capacity: number;
-  spots_reserved: number;
-  price_per_person: number;
-  deposit_per_person: number;
-  remaining_per_person: number;
 };
 
 type EventItem = {
@@ -23,9 +21,25 @@ type EventItem = {
     | Club
     | Club[]
     | null;
+};
 
-  vip_offers:
-    | VipOffer[]
+type VipOffer = {
+  id: string;
+
+  table_number: string;
+
+  capacity: number;
+
+  spots_reserved: number;
+
+  price_per_person: number;
+
+  deposit_per_person: number;
+
+  remaining_per_person: number;
+
+  booking_deadline:
+    | string
     | null;
 };
 
@@ -38,77 +52,147 @@ export default async function CheckoutPage({
   }>;
 
   searchParams: Promise<{
+    table?: string;
     quantity?: string;
   }>;
 }) {
-  const { id } = await params;
+  const { id } =
+    await params;
 
   const query =
     await searchParams;
 
+  const tableId =
+    query.table?.trim();
+
   const quantity =
-    Number(query.quantity ?? 1);
+    Number(
+      query.quantity ?? 1
+    );
 
   if (
-    !Number.isInteger(quantity) ||
+    !tableId ||
+    !Number.isInteger(
+      quantity
+    ) ||
     quantity < 1
   ) {
     notFound();
   }
 
-  const { data, error } =
+  const {
+    data: eventData,
+    error: eventError,
+  } =
     await supabase
       .from("events")
       .select(`
         id,
         slug,
         name,
+
         clubs (
           name
-        ),
-        vip_offers (
-          capacity,
-          spots_reserved,
-          price_per_person,
-          deposit_per_person,
-          remaining_per_person
         )
       `)
-      .eq("slug", id)
-      .eq("status", "published")
+      .eq(
+        "slug",
+        id
+      )
+      .eq(
+        "status",
+        "published"
+      )
       .single();
 
-  if (error || !data) {
+  if (
+    eventError ||
+    !eventData
+  ) {
     console.error(
-      "Erreur checkout :",
-      error
+      "Erreur checkout event :",
+      eventError
     );
 
     notFound();
   }
 
   const event =
-    data as EventItem;
+    eventData as EventItem;
 
   const club =
-    Array.isArray(event.clubs)
+    Array.isArray(
+      event.clubs
+    )
       ? event.clubs[0]
       : event.clubs;
 
-  const offer =
-    event.vip_offers?.[0];
-
-  if (!club || !offer) {
+  if (!club) {
     notFound();
   }
 
+  const {
+    data: offerData,
+    error: offerError,
+  } =
+    await supabase
+      .from("vip_offers")
+      .select(`
+        id,
+        table_number,
+        capacity,
+        spots_reserved,
+        price_per_person,
+        deposit_per_person,
+        remaining_per_person,
+        booking_deadline
+      `)
+      .eq(
+        "id",
+        tableId
+      )
+      .eq(
+        "event_id",
+        event.id
+      )
+      .single();
+
+  if (
+    offerError ||
+    !offerData
+  ) {
+    console.error(
+      "Erreur checkout table :",
+      offerError
+    );
+
+    notFound();
+  }
+
+  const offer =
+    offerData as VipOffer;
+
   const availableSpots =
-    Number(offer.capacity) -
-    Number(offer.spots_reserved);
+    Number(
+      offer.capacity
+    ) -
+    Number(
+      offer.spots_reserved
+    );
 
   if (
     quantity >
     availableSpots
+  ) {
+    notFound();
+  }
+
+  if (
+    offer.booking_deadline &&
+    new Date(
+      offer.booking_deadline
+    ).getTime() <=
+      new Date().getTime()
   ) {
     notFound();
   }
@@ -130,10 +214,24 @@ export default async function CheckoutPage({
 
   return (
     <CheckoutClient
-      slug={event.slug}
-      clubName={club.name}
-      eventName={event.name}
-      quantity={quantity}
+      slug={
+        event.slug
+      }
+      vipOfferId={
+        offer.id
+      }
+      tableNumber={
+        offer.table_number
+      }
+      clubName={
+        club.name
+      }
+      eventName={
+        event.name
+      }
+      quantity={
+        quantity
+      }
       totalPrice={
         pricePerPerson *
         quantity

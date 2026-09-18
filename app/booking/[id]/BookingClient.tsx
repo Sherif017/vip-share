@@ -1,20 +1,50 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+
+import {
+  useState,
+} from "react";
 
 type BookingClientProps = {
   slug: string;
+
   clubName: string;
   eventName: string;
+
   eventDate: string;
   startTime: string;
+
+  vipOfferId: string;
+  tableNumber: string;
+
   capacity: number;
   spotsReserved: number;
+
   pricePerPerson: number;
   depositPerPerson: number;
   remainingPerPerson: number;
+
+  bookingDeadline:
+    | string
+    | null;
 };
+
+function formatMoney(
+  value: number
+) {
+  return new Intl.NumberFormat(
+    "fr-FR",
+    {
+      minimumFractionDigits:
+        Number.isInteger(value)
+          ? 0
+          : 2,
+
+      maximumFractionDigits: 2,
+    }
+  ).format(value);
+}
 
 export default function BookingClient({
   slug,
@@ -22,72 +52,121 @@ export default function BookingClient({
   eventName,
   eventDate,
   startTime,
+
+  vipOfferId,
+  tableNumber,
+
   capacity,
   spotsReserved,
+
   pricePerPerson,
   depositPerPerson,
   remainingPerPerson,
+
+  bookingDeadline,
 }: BookingClientProps) {
-  const availableSpots = Math.max(
-    capacity - spotsReserved,
-    0
-  );
+  const availableSpots =
+    Math.max(
+      capacity -
+        spotsReserved,
+      0
+    );
 
-  const [quantity, setQuantity] = useState(1);
+  const [
+    quantity,
+    setQuantity,
+  ] = useState(1);
 
-  const totalPrice = pricePerPerson * quantity;
-  const totalDeposit = depositPerPerson * quantity;
-  const totalRemaining = remainingPerPerson * quantity;
+  const [now] = useState(() => Date.now());
 
-  const formattedDate = new Intl.DateTimeFormat(
-    "fr-FR",
-    {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }
-  ).format(new Date(`${eventDate}T12:00:00`));
+  const deadlinePassed =
+    bookingDeadline
+      ? new Date(
+          bookingDeadline
+        ).getTime() <=
+        now
+      : false;
+
+  const canBook =
+    availableSpots > 0 &&
+    !deadlinePassed;
+
+  const totalPrice =
+    pricePerPerson *
+    quantity;
+
+  const totalDeposit =
+    depositPerPerson *
+    quantity;
+
+  const totalRemaining =
+    remainingPerPerson *
+    quantity;
+
+  const formattedDate =
+    new Intl.DateTimeFormat(
+      "fr-FR",
+      {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }
+    ).format(
+      new Date(
+        `${eventDate}T12:00:00`
+      )
+    );
 
   function decreaseQuantity() {
-    setQuantity((current) =>
-      Math.max(1, current - 1)
+    setQuantity(
+      (current) =>
+        Math.max(
+          1,
+          current - 1
+        )
     );
   }
 
   function increaseQuantity() {
-    setQuantity((current) =>
-      Math.min(availableSpots, current + 1)
+    setQuantity(
+      (current) =>
+        Math.min(
+          availableSpots,
+          current + 1
+        )
     );
   }
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <section className="max-w-5xl mx-auto px-6 py-14">
+      <section className="mx-auto max-w-5xl px-6 py-14">
         <Link
           href={`/events/${slug}`}
-          className="inline-block text-sm text-zinc-400 hover:text-white mb-10 transition"
+          className="mb-10 inline-block text-sm text-zinc-400 transition hover:text-white"
         >
           ← Retour à la soirée
         </Link>
 
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
           <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-zinc-500 mb-3">
+            <p className="mb-3 text-sm uppercase tracking-[0.3em] text-zinc-500">
               Réservation
             </p>
 
-            <h1 className="text-4xl md:text-5xl font-bold mb-3">
+            <h1 className="mb-3 text-4xl font-bold md:text-5xl">
               Choisis tes places
             </h1>
 
-            <p className="text-zinc-400 mb-10">
-              Réserve une ou plusieurs places sur la table VIP
-              partagée.
+            <p className="mb-10 text-zinc-400">
+              Réserve une ou
+              plusieurs places sur
+              la table VIP
+              sélectionnée.
             </p>
 
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-7 mb-6">
-              <p className="text-sm text-zinc-500 mb-2">
+            <div className="mb-6 rounded-3xl border border-zinc-800 bg-zinc-950 p-7">
+              <p className="mb-2 text-sm text-zinc-500">
                 Ta soirée
               </p>
 
@@ -95,83 +174,119 @@ export default function BookingClient({
                 {clubName}
               </h2>
 
-              <p className="text-zinc-400 mt-1">
+              <p className="mt-1 text-zinc-400">
                 {eventName}
               </p>
 
-              <div className="mt-6 space-y-2 text-sm text-zinc-400">
-                <p className="capitalize">
-                  {formattedDate}
-                </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <span className="rounded-full border border-zinc-700 px-4 py-2 text-sm">
+                  Table n°
+                  {tableNumber}
+                </span>
 
-                <p>
-                  {startTime.slice(0, 5)}
-                </p>
+                <span className="rounded-full border border-zinc-800 px-4 py-2 text-sm text-zinc-400 capitalize">
+                  {formattedDate}
+                </span>
+
+                <span className="rounded-full border border-zinc-800 px-4 py-2 text-sm text-zinc-400">
+                  {startTime.slice(
+                    0,
+                    5
+                  )}
+                </span>
               </div>
             </div>
 
             <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-7">
-              <div className="flex items-center justify-between mb-8">
+              <div className="mb-8 flex items-center justify-between gap-5">
                 <div>
-                  <p className="text-sm text-zinc-500 mb-1">
-                    Nombre de places
+                  <p className="mb-1 text-sm text-zinc-500">
+                    Nombre de
+                    places
                   </p>
 
                   <p className="text-zinc-300">
-                    {availableSpots} disponible
-                    {availableSpots > 1 ? "s" : ""}
+                    {
+                      availableSpots
+                    }{" "}
+                    disponible
+                    {availableSpots >
+                    1
+                      ? "s"
+                      : ""}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-5">
                   <button
                     type="button"
-                    onClick={decreaseQuantity}
-                    disabled={quantity <= 1}
-                    className="w-12 h-12 rounded-full border border-zinc-700 text-xl disabled:opacity-30 hover:border-white transition"
+                    onClick={
+                      decreaseQuantity
+                    }
+                    disabled={
+                      quantity <= 1
+                    }
+                    className="h-12 w-12 rounded-full border border-zinc-700 text-xl transition hover:border-white disabled:opacity-30"
                   >
                     −
                   </button>
 
-                  <span className="text-3xl font-semibold min-w-8 text-center">
+                  <span className="min-w-8 text-center text-3xl font-semibold">
                     {quantity}
                   </span>
 
                   <button
                     type="button"
-                    onClick={increaseQuantity}
-                    disabled={quantity >= availableSpots}
-                    className="w-12 h-12 rounded-full border border-zinc-700 text-xl disabled:opacity-30 hover:border-white transition"
+                    onClick={
+                      increaseQuantity
+                    }
+                    disabled={
+                      quantity >=
+                      availableSpots
+                    }
+                    className="h-12 w-12 rounded-full border border-zinc-700 text-xl transition hover:border-white disabled:opacity-30"
                   >
                     +
                   </button>
                 </div>
               </div>
 
-              <div className="border-t border-zinc-800 pt-6 space-y-4">
+              <div className="space-y-4 border-t border-zinc-800 pt-6">
                 <div className="flex justify-between">
                   <span className="text-zinc-400">
-                    Prix par personne
+                    Prix par
+                    personne
                   </span>
 
                   <span>
-                    {pricePerPerson.toFixed(0)}€
+                    {formatMoney(
+                      pricePerPerson
+                    )}
+                    €
                   </span>
                 </div>
 
                 <div className="flex justify-between">
                   <span className="text-zinc-400">
-                    Nombre de places
+                    Nombre de
+                    places
                   </span>
 
-                  <span>× {quantity}</span>
+                  <span>
+                    × {quantity}
+                  </span>
                 </div>
 
-                <div className="flex justify-between text-lg font-semibold border-t border-zinc-800 pt-4">
-                  <span>Total</span>
+                <div className="flex justify-between border-t border-zinc-800 pt-4 text-lg font-semibold">
+                  <span>
+                    Total
+                  </span>
 
                   <span>
-                    {totalPrice.toFixed(0)}€
+                    {formatMoney(
+                      totalPrice
+                    )}
+                    €
                   </span>
                 </div>
               </div>
@@ -180,69 +295,116 @@ export default function BookingClient({
 
           <aside>
             <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-7 lg:sticky lg:top-8">
-              <h2 className="text-xl font-semibold mb-7">
+              <h2 className="mb-7 text-xl font-semibold">
                 Récapitulatif
               </h2>
 
               <div className="space-y-5">
                 <div className="flex justify-between">
                   <span className="text-zinc-400">
-                    {quantity} place
-                    {quantity > 1 ? "s" : ""}
+                    Table
                   </span>
 
                   <span className="font-semibold">
-                    {totalPrice.toFixed(0)}€
+                    N°{" "}
+                    {tableNumber}
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">
+                    {quantity}{" "}
+                    place
+                    {quantity > 1
+                      ? "s"
+                      : ""}
+                  </span>
+
+                  <span className="font-semibold">
+                    {formatMoney(
+                      totalPrice
+                    )}
+                    €
                   </span>
                 </div>
 
                 <div className="border-t border-zinc-800 pt-5">
-                  <div className="flex justify-between mb-2">
+                  <div className="mb-2 flex justify-between">
                     <span className="text-zinc-400">
-                      À payer maintenant
+                      Deposit
                     </span>
 
                     <span className="text-xl font-bold">
-                      {totalDeposit.toFixed(0)}€
+                      {formatMoney(
+                        totalDeposit
+                      )}
+                      €
                     </span>
                   </div>
 
                   <p className="text-xs text-zinc-500">
-                    Acompte de{" "}
-                    {depositPerPerson.toFixed(0)}€ par personne.
+                    {formatMoney(
+                      depositPerPerson
+                    )}
+                    € de Deposit par
+                    personne.
                   </p>
                 </div>
 
                 <div className="flex justify-between border-t border-zinc-800 pt-5">
                   <span className="text-zinc-400">
-                    À payer sur place
+                    À payer sur
+                    place
                   </span>
 
                   <span className="font-semibold">
-                    {totalRemaining.toFixed(0)}€
+                    {formatMoney(
+                      totalRemaining
+                    )}
+                    €
                   </span>
                 </div>
               </div>
 
-              {availableSpots > 0 ? (
+              {deadlinePassed && (
+                <p className="mt-6 text-sm text-red-400">
+                  Les réservations
+                  sont terminées
+                  pour cette table.
+                </p>
+              )}
+
+              {canBook ? (
                 <Link
-                    href={`/checkout/${slug}?quantity=${quantity}`}
-                    className="block w-full mt-8 rounded-2xl bg-white text-black text-center font-semibold py-4 hover:bg-zinc-200 transition"
+                  href={`/checkout/${slug}?table=${encodeURIComponent(
+                    vipOfferId
+                  )}&quantity=${quantity}`}
+                  className="mt-8 block w-full rounded-2xl bg-white py-4 text-center font-semibold text-black transition hover:bg-zinc-200"
                 >
-                     Continuer
-                 </Link>
+                  Continuer ·{" "}
+                  {formatMoney(
+                    totalDeposit
+                  )}
+                  €
+                </Link>
               ) : (
                 <button
-                    type="button"
-                    disabled
-                    className="block w-full mt-8 rounded-2xl bg-zinc-800 text-zinc-500 text-center font-semibold py-4 cursor-not-allowed"
+                  type="button"
+                  disabled
+                  className="mt-8 block w-full cursor-not-allowed rounded-2xl bg-zinc-800 py-4 text-center font-semibold text-zinc-500"
                 >
-                    Complet
+                  {deadlinePassed
+                    ? "Réservations terminées"
+                    : "Complet"}
                 </button>
               )}
 
-              <p className="text-xs text-zinc-500 text-center mt-4">
-                Le montant restant sera payé sur place.
+              <p className="mt-4 text-center text-xs text-zinc-500">
+                Tu paies le
+                Deposit maintenant.
+                Le reste sera réglé
+                directement sur
+                place.
               </p>
             </div>
           </aside>

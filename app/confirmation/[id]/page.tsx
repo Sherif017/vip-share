@@ -1,9 +1,22 @@
-import { notFound, redirect } from "next/navigation";
+import {
+  notFound,
+  redirect,
+} from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server";
+import {
+  createClient,
+} from "@/lib/supabase/server";
 
 import ConfirmationClient from "./ConfirmationClient";
 import RefreshStatus from "./RefreshStatus";
+import { isPassAccessible } from "@/lib/vip-status";
+
+type VipOffer = {
+  id: string;
+  table_number: string;
+  capacity: number;
+  spots_reserved: number;
+};
 
 type Reservation = {
   id: string;
@@ -16,6 +29,11 @@ type Reservation = {
   remaining_amount: number;
 
   status: string;
+
+  vip_offers:
+    | VipOffer
+    | VipOffer[]
+    | null;
 
   events:
     | {
@@ -62,55 +80,65 @@ export default async function ConfirmationPage({
     id: string;
   }>;
 }) {
-  const { id } = await params;
+  const { id } =
+    await params;
 
-  /*
-  |--------------------------------------------------------------------------
-  | Utilisateur connecté
-  |--------------------------------------------------------------------------
-  */
-
-  const supabase = await createClient();
+  const supabase =
+    await createClient();
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } =
+    await supabase.auth.getUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Réservation appartenant à cet utilisateur
-  |--------------------------------------------------------------------------
-  */
+  const {
+    data,
+    error,
+  } =
+    await supabase
+      .from("reservations")
+      .select(`
+        id,
+        reservation_code,
+        firstname,
+        quantity,
+        total_price,
+        deposit_paid,
+        remaining_amount,
+        status,
 
-  const { data, error } = await supabase
-    .from("reservations")
-    .select(`
-      id,
-      reservation_code,
-      firstname,
-      quantity,
-      total_price,
-      deposit_paid,
-      remaining_amount,
-      status,
-      events (
-        slug,
-        name,
-        event_date,
-        start_time,
-        clubs (
+        vip_offers (
+          id,
+          table_number,
+          capacity,
+          spots_reserved
+        ),
+
+        events (
+          slug,
           name,
-          city
+          event_date,
+          start_time,
+
+          clubs (
+            name,
+            city
+          )
         )
+      `)
+      .eq(
+        "reservation_code",
+        id
       )
-    `)
-    .eq("reservation_code", id)
-    .eq("user_id", user.id)
-    .maybeSingle();
+      .eq(
+        "user_id",
+        user.id
+      )
+      .maybeSingle();
 
   if (error) {
     console.error(
@@ -128,108 +156,85 @@ export default async function ConfirmationPage({
   const reservation =
     data as unknown as Reservation;
 
-  /*
-  |--------------------------------------------------------------------------
-  | Relations Supabase
-  |--------------------------------------------------------------------------
-  */
-
-  const event = Array.isArray(
-    reservation.events
-  )
-    ? reservation.events[0]
-    : reservation.events;
+  const event =
+    Array.isArray(
+      reservation.events
+    )
+      ? reservation.events[0]
+      : reservation.events;
 
   if (!event) {
     notFound();
   }
 
-  const club = Array.isArray(
-    event.clubs
-  )
-    ? event.clubs[0]
-    : event.clubs;
+  const club =
+    Array.isArray(
+      event.clubs
+    )
+      ? event.clubs[0]
+      : event.clubs;
 
   if (!club) {
     notFound();
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Paiement en cours de confirmation
-  |--------------------------------------------------------------------------
-  */
+  const offer =
+    Array.isArray(
+      reservation.vip_offers
+    )
+      ? reservation.vip_offers[0]
+      : reservation.vip_offers;
+
+  if (!offer) {
+    notFound();
+  }
 
   if (
     reservation.status ===
     "pending_payment"
   ) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
+      <main className="flex min-h-screen items-center justify-center bg-black px-6 text-white">
         <RefreshStatus />
 
-        <div className="max-w-md w-full text-center">
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto mb-7 h-16 w-16 animate-spin rounded-full border-2 border-zinc-700 border-t-white" />
 
-          <div className="mx-auto mb-7 h-16 w-16 rounded-full border-2 border-zinc-700 border-t-white animate-spin" />
-
-          <p className="text-sm uppercase tracking-[0.3em] text-zinc-500 mb-3">
+          <p className="mb-3 text-sm uppercase tracking-[0.3em] text-zinc-500">
             VIP Share
           </p>
 
-          <h1 className="text-3xl md:text-4xl font-bold">
+          <h1 className="text-3xl font-bold md:text-4xl">
             Paiement reçu
           </h1>
 
-          <p className="text-zinc-400 mt-4">
-            Nous confirmons ta réservation
-            avec Stripe.
+          <p className="mt-4 text-zinc-400">
+            Nous confirmons ta réservation avec Stripe.
           </p>
 
-          <p className="text-zinc-600 text-sm mt-2">
-            Cela prend généralement quelques
-            secondes.
+          <p className="mt-2 text-sm text-zinc-600">
+            Cela prend généralement quelques secondes.
           </p>
-
         </div>
       </main>
     );
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Réservation non confirmée
-  |--------------------------------------------------------------------------
-  */
-
-  if (
-    reservation.status !==
-    "confirmed"
-  ) {
+  if (!isPassAccessible(reservation.status)) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
-
+      <main className="flex min-h-screen items-center justify-center bg-black px-6 text-white">
         <div className="max-w-md text-center">
-
-          <h1 className="text-3xl font-bold mb-4">
+          <h1 className="mb-4 text-3xl font-bold">
             Réservation non confirmée
           </h1>
 
           <p className="text-zinc-400">
-            Cette réservation n&apos;a pas
-            été confirmée par le paiement.
+            Cette réservation n&apos;a pas été confirmée par le paiement.
           </p>
-
         </div>
-
       </main>
     );
   }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Pass VIP
-  |--------------------------------------------------------------------------
-  */
 
   return (
     <ConfirmationClient
@@ -240,7 +245,9 @@ export default async function ConfirmationPage({
         reservation.firstname
       }
       quantity={
-        Number(reservation.quantity)
+        Number(
+          reservation.quantity
+        )
       }
       totalPrice={
         Number(
@@ -277,6 +284,19 @@ export default async function ConfirmationPage({
       }
       clubCity={
         club.city
+      }
+      tableNumber={
+        offer.table_number
+      }
+      tableParticipants={
+        Number(
+          offer.spots_reserved
+        )
+      }
+      tableCapacity={
+        Number(
+          offer.capacity
+        )
       }
     />
   );

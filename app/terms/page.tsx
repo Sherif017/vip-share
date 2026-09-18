@@ -34,14 +34,14 @@ export default function TermsPage() {
             <p>
               L&apos;utilisateur sélectionne un événement,
               le nombre de places souhaitées et procède
-              au paiement de l&apos;acompte indiqué lors
+              au paiement du Deposit indiqué lors
               de la réservation.
             </p>
 
             <p className="mt-3">
               Une réservation n&apos;est considérée comme
               confirmée qu&apos;après validation du
-              paiement de l&apos;acompte.
+              paiement du Deposit.
             </p>
           </section>
 
@@ -52,7 +52,7 @@ export default function TermsPage() {
 
             <p>
               Le prix total d&apos;une place ainsi que
-              l&apos;acompte à payer immédiatement sont
+              le Deposit à payer immédiatement sont
               indiqués avant validation de la réservation.
             </p>
 
@@ -143,7 +143,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="mb-3 text-xl font-semibold text-white">
-              8. Accès à l'établissement
+              8. Accès à l&apos;établissement
             </h2>
 
             <p>

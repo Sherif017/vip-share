@@ -44,14 +44,26 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  const isPublicRoute =
-    pathname === "/" ||
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/register") ||
-    pathname.startsWith("/auth") ||
-    pathname.startsWith("/api/stripe/webhook");
+  const isApiRoute = pathname.startsWith("/api/");
+  const isPath = (prefix: string) =>
+    pathname === prefix || pathname.startsWith(`${prefix}/`);
 
-  if (!user && !isPublicRoute) {
+  const isPublicPage =
+    pathname === "/" ||
+    isPath("/events") ||
+    isPath("/login") ||
+    isPath("/register") ||
+    isPath("/forgot-password") ||
+    isPath("/auth") ||
+    isPath("/legal") ||
+    isPath("/privacy") ||
+    isPath("/terms");
+
+  // Les handlers API doivent produire leurs propres réponses JSON 401/403.
+  // Le proxy continue cependant à rafraîchir les cookies Supabase ci-dessus.
+  const isPublicRoute = isPublicPage || pathname === "/api/stripe/webhook";
+
+  if (!user && !isApiRoute && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
 
@@ -60,8 +72,8 @@ export async function updateSession(request: NextRequest) {
 
   if (
     user &&
-    (pathname.startsWith("/login") ||
-      pathname.startsWith("/register"))
+    !isApiRoute &&
+    (isPath("/login") || isPath("/register"))
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/events";

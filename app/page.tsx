@@ -126,7 +126,7 @@ export default function HomePage() {
 
               <p className="mt-3 leading-7 text-zinc-400">
                 Choisis le nombre de places dont tu as
-                besoin et paie uniquement l&apos;acompte
+                besoin et paie uniquement le Deposit
                 en ligne.
               </p>
 

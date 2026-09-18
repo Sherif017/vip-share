@@ -1,4 +1,22 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VIP Share
+
+Application Next.js de réservation de tables VIP avec Supabase, Stripe Checkout et rôles administratifs.
+
+## Installation et vérifications
+
+```bash
+npm install
+npm run dev
+npx tsc --noEmit
+npm run lint
+npm run build -- --webpack
+```
+
+Variables nécessaires : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` et `CRON_SECRET`. Ne jamais committer leurs valeurs ni placer un secret dans `NEXT_PUBLIC_*`.
+
+Les migrations additives sont dans [supabase/migrations](./supabase/migrations) et ne sont pas appliquées automatiquement. Voir [supabase/README.md](./supabase/README.md).
+
+Le webhook Stripe utilise `/api/stripe/webhook`. Le Cron Vercel appelle `/api/cron/maintenance` chaque heure avec `Authorization: Bearer $CRON_SECRET`.
 
 ## Getting Started
 

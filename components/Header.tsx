@@ -1,189 +1,169 @@
 import Link from "next/link";
 
-import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getAdminAccess } from "@/lib/admin-access";
 
-import LogoutButton from "./LogoutButton";
+import LogoutButton from "@/components/LogoutButton";
 
 export default async function Header() {
-  /*
-  |--------------------------------------------------------------------------
-  | Utilisateur connecté
-  |--------------------------------------------------------------------------
-  */
+  const access = await getAdminAccess();
+  const user = access !== null;
 
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  /*
-  |--------------------------------------------------------------------------
-  | Vérification admin
-  |--------------------------------------------------------------------------
-  */
-
-  let isAdmin = false;
-
-  if (user) {
-    const { data: profile, error } =
-      await supabaseAdmin
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", user.id)
-        .maybeSingle();
-
-    if (error) {
-      console.error(
-        "Erreur récupération profil admin :",
-        error
-      );
-    }
-
-    isAdmin = Boolean(profile?.is_admin);
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Header
-  |--------------------------------------------------------------------------
-  */
+  const isManager = access?.isManager ?? false;
+  const isClubAdmin =
+    isManager || (access?.managedClubIds.length ?? 0) > 0;
+  const canScan = access?.canScanAnyClub ?? false;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-black/90 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-
-        {/* LOGO */}
+    <header className="border-b border-gray-200 bg-white">
+      <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-6 px-4 py-3 sm:px-6 lg:px-8">
+        {/* ====================================================
+            LOGO
+        ==================================================== */}
 
         <Link
           href="/"
-          className="text-lg font-bold tracking-[0.18em] text-white transition hover:text-zinc-300"
+          className="shrink-0 text-xl font-black tracking-tight text-black"
         >
-          VIP SHARE
+          VIP Share
         </Link>
 
-        {/* VISITEUR NON CONNECTÉ */}
+        {/* ====================================================
+            NAVIGATION DESKTOP
+        ==================================================== */}
 
-        {!user ? (
-          <div className="flex items-center gap-3">
+        <nav className="hidden items-center gap-6 md:flex">
+          <Link
+            href="/events"
+            className="text-sm font-medium text-gray-700 transition hover:text-black"
+          >
+            Soirées
+          </Link>
 
+          {user && (
             <Link
-              href="/login"
-              className="hidden text-sm font-medium text-zinc-400 transition hover:text-white sm:block"
+              href="/reservations"
+              className="text-sm font-medium text-gray-700 transition hover:text-black"
             >
-              Se connecter
+              Mes réservations
             </Link>
+          )}
 
+          {/* --------------------------------------------------
+              ADMIN CLUB
+          -------------------------------------------------- */}
+
+          {user && isClubAdmin && (
             <Link
-              href="/register"
-              className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200"
+              href="/admin"
+              className="text-sm font-medium text-gray-700 transition hover:text-black"
             >
-              Créer un compte
+              Admin
             </Link>
+          )}
 
-          </div>
-        ) : (
-          /*
-          |--------------------------------------------------------------------------
-          | MENU UTILISATEUR CONNECTÉ
-          |--------------------------------------------------------------------------
-          */
+          {/* --------------------------------------------------
+              SCANNER
+          -------------------------------------------------- */}
 
-          <details className="group relative">
+          {user && canScan && (
+            <Link
+              href="/admin/scan"
+              className="text-sm font-medium text-gray-700 transition hover:text-black"
+            >
+              Scanner
+            </Link>
+          )}
 
-            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-medium text-white transition hover:border-white hover:bg-white/5">
-              Menu
+          {/* --------------------------------------------------
+              MANAGER VIP SHARE
+          -------------------------------------------------- */}
 
-              <svg
-                viewBox="0 0 20 20"
-                fill="none"
-                className="h-4 w-4 transition duration-200 group-open:rotate-180"
+          {user && isManager && (
+            <Link
+              href="/manager"
+              className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+            >
+              Manager
+            </Link>
+          )}
+        </nav>
+
+        {/* ====================================================
+            AUTH
+        ==================================================== */}
+
+        <div className="flex items-center gap-3">
+          {!user ? (
+            <>
+              <Link
+                href="/login"
+                className="text-sm font-medium text-gray-700 transition hover:text-black"
               >
-                <path
-                  d="M5 7.5L10 12.5L15 7.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </summary>
+                Connexion
+              </Link>
 
-            <div className="absolute right-0 mt-3 w-64 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+              <Link
+                href="/register"
+                className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+              >
+                Créer un compte
+              </Link>
+            </>
+          ) : (
+            <LogoutButton />
+          )}
+        </div>
+      </div>
 
-              {/* UTILISATEUR */}
+      {/* ======================================================
+          NAVIGATION MOBILE
+      ====================================================== */}
 
-              <div className="border-b border-zinc-800 px-5 py-4">
-                <p className="text-xs uppercase tracking-wider text-zinc-600">
-                  Mon compte
-                </p>
+      <div className="border-t border-gray-100 md:hidden">
+        <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 sm:px-6">
+          <Link
+            href="/events"
+            className="whitespace-nowrap rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700"
+          >
+            Soirées
+          </Link>
 
-                <p className="mt-1 truncate text-sm text-zinc-300">
-                  {user.email}
-                </p>
-              </div>
+          {user && (
+            <Link
+              href="/reservations"
+              className="whitespace-nowrap rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700"
+            >
+              Mes réservations
+            </Link>
+          )}
 
-              {/* NAVIGATION */}
+          {user && isClubAdmin && (
+            <Link
+              href="/admin"
+              className="whitespace-nowrap rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700"
+            >
+              Admin
+            </Link>
+          )}
 
-              <div className="p-2">
+          {user && canScan && (
+            <Link
+              href="/admin/scan"
+              className="whitespace-nowrap rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700"
+            >
+              Scanner
+            </Link>
+          )}
 
-                <Link
-                  href="/events"
-                  className="flex items-center justify-between rounded-xl px-4 py-3 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
-                >
-                  <span>Soirées</span>
-                  <span className="text-zinc-600">→</span>
-                </Link>
-
-                <Link
-                  href="/reservations"
-                  className="flex items-center justify-between rounded-xl px-4 py-3 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
-                >
-                  <span>Mes réservations</span>
-                  <span className="text-zinc-600">→</span>
-                </Link>
-
-                {/* ADMIN */}
-
-                {isAdmin && (
-                  <>
-                    <div className="my-2 border-t border-zinc-800" />
-
-                    <p className="px-4 py-2 text-xs uppercase tracking-wider text-zinc-600">
-                      Administration
-                    </p>
-
-                    <Link
-                      href="/admin"
-                      className="flex items-center justify-between rounded-xl px-4 py-3 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
-                    >
-                      <span>Dashboard admin</span>
-                      <span className="text-zinc-600">→</span>
-                    </Link>
-
-                    <Link
-                      href="/admin/scan"
-                      className="flex items-center justify-between rounded-xl px-4 py-3 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
-                    >
-                      <span>Scanner un pass</span>
-                      <span className="text-zinc-600">→</span>
-                    </Link>
-                  </>
-                )}
-
-              </div>
-
-              {/* LOGOUT */}
-
-              <div className="border-t border-zinc-800 p-3">
-                <LogoutButton />
-              </div>
-
-            </div>
-
-          </details>
-        )}
+          {user && isManager && (
+            <Link
+              href="/manager"
+              className="whitespace-nowrap rounded-lg bg-black px-3 py-2 text-sm font-semibold text-white"
+            >
+              Manager
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );

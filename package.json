@@ -4,6 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:staging": "node scripts/staging.mjs dev",
+    "shell:staging": "node scripts/staging.mjs shell",
+    "check:staging": "node scripts/staging.mjs check",
+    "build:staging": "node scripts/staging.mjs build",
+    "test:checkout-retry": "node --test tests/checkout-retry.test.mjs",
+    "test:refund": "node --test tests/refund-route.test.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

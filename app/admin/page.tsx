@@ -1,10 +1,28 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server";
+import {
+  getAdminAccess,
+} from "@/lib/admin-access";
+
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
-type EventRow = {
+type Club = {
+  id: string;
+  name: string;
+  city: string;
+};
+
+type VipOffer = {
+  id: string;
+  table_number: string;
+  capacity: number;
+  confirmation_threshold: number;
+  spots_reserved: number;
+  status: string;
+};
+
+type EventItem = {
   id: string;
   slug: string;
   name: string;
@@ -13,342 +31,474 @@ type EventRow = {
   status: string;
 
   clubs:
-    | {
-        name: string;
-        city: string;
-      }
-    | {
-        name: string;
-        city: string;
-      }[]
+    | Club
+    | Club[]
     | null;
 
   vip_offers:
-    | {
-        id: string;
-        capacity: number;
-        spots_reserved: number;
-        price_per_person: number;
-        deposit_per_person: number;
-        status: string;
-      }[]
+    | VipOffer[]
     | null;
 };
 
 export default async function AdminPage() {
-  const supabase = await createClient();
+  // ==========================================================
+  // ACCESS
+  // ==========================================================
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const access =
+    await getAdminAccess();
 
-  if (!user) {
+  if (!access) {
     redirect("/login");
   }
 
-  const { data: profile } = await supabaseAdmin
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single();
+  if (!access.canManageAnyClub) {
+    if (access.canScanAnyClub) {
+      redirect("/admin/scan");
+    }
 
-  if (!profile?.is_admin) {
     redirect("/events");
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("events")
-    .select(`
-      id,
-      slug,
-      name,
-      event_date,
-      start_time,
-      status,
-      clubs (
-        name,
-        city
-      ),
-      vip_offers (
+  // ==========================================================
+  // EVENTS
+  // ==========================================================
+
+  let query =
+    supabaseAdmin
+      .from("events")
+      .select(`
         id,
-        capacity,
-        spots_reserved,
-        price_per_person,
-        deposit_per_person,
-        status
-      )
-    `)
-    .order("event_date", {
-      ascending: true,
-    });
+        slug,
+        name,
+        event_date,
+        start_time,
+        status,
+
+        clubs (
+          id,
+          name,
+          city
+        ),
+
+        vip_offers (
+          id,
+          table_number,
+          capacity,
+          confirmation_threshold,
+          spots_reserved,
+          status
+        )
+      `)
+      .order(
+        "event_date",
+        {
+          ascending: false,
+        }
+      );
+
+  // Club Admin :
+  // uniquement ses clubs.
+  //
+  // Manager :
+  // aucune restriction.
+
+  if (!access.isManager) {
+    query =
+      query.in(
+        "club_id",
+        access.managedClubIds
+      );
+  }
+
+  const {
+    data,
+    error,
+  } = await query;
 
   if (error) {
     console.error(
-      "Erreur chargement dashboard admin :",
+      "Erreur dashboard admin :",
       error
     );
   }
 
   const events =
-    (data ?? []) as unknown as EventRow[];
+    (data ?? []) as unknown as EventItem[];
 
+  // ==========================================================
+  // STATS
+  // ==========================================================
+
+  let totalTables = 0;
   let totalCapacity = 0;
   let totalReserved = 0;
-  let estimatedDeposits = 0;
+  let tablesToReview = 0;
 
   for (const event of events) {
-    const offer = event.vip_offers?.[0];
+    for (
+      const offer of
+      event.vip_offers ?? []
+    ) {
+      totalTables += 1;
 
-    if (!offer) {
-      continue;
+      totalCapacity +=
+        Number(
+          offer.capacity
+        );
+
+      totalReserved +=
+        Number(
+          offer.spots_reserved
+        );
+
+      if (
+        offer.status ===
+        "admin_review"
+      ) {
+        tablesToReview += 1;
+      }
     }
-
-    totalCapacity += Number(offer.capacity);
-    totalReserved += Number(
-      offer.spots_reserved ?? 0
-    );
-
-    estimatedDeposits +=
-      Number(offer.spots_reserved ?? 0) *
-      Number(offer.deposit_per_person);
   }
 
   const fillRate =
     totalCapacity > 0
       ? Math.round(
-          (totalReserved / totalCapacity) * 100
+          (
+            totalReserved /
+            totalCapacity
+          ) *
+            100
         )
       : 0;
+
+  // ==========================================================
+  // UI
+  // ==========================================================
 
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-7xl px-6 py-12">
-        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+        {/* ==================================================
+            HEADER
+        ================================================== */}
+
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
-              VIP Share
+              VIP Share · Admin
             </p>
 
             <h1 className="mt-3 text-4xl font-bold">
-              Dashboard admin
+              Dashboard
             </h1>
 
             <p className="mt-3 text-zinc-400">
-              Gère les événements, les places VIP
-              et les réservations.
+              {access.isManager
+                ? "Vue globale de tous les clubs VIP Share."
+                : "Gère les soirées et tables de ton club."}
             </p>
           </div>
 
-          <Link
-            href="/admin/events/new"
-            className="rounded-full bg-white px-6 py-3 text-center text-sm font-semibold text-black transition hover:bg-zinc-200"
-          >
-            + Créer une soirée
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            {access.isManager && (
+              <Link
+                href="/manager"
+                className="rounded-full border border-zinc-700 px-5 py-3 text-sm transition hover:border-white"
+              >
+                Espace Manager
+              </Link>
+            )}
+
+            <Link
+              href="/admin/scan"
+              className="rounded-full border border-zinc-700 px-5 py-3 text-sm transition hover:border-white"
+            >
+              Scanner
+            </Link>
+
+            <Link
+              href="/admin/events/new"
+              className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
+            >
+              + Créer une soirée
+            </Link>
+          </div>
         </div>
 
-        <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* ==================================================
+            STATS
+        ================================================== */}
+
+        <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard
             label="Soirées"
             value={events.length.toString()}
           />
 
           <StatCard
-            label="Places réservées"
-            value={totalReserved.toString()}
+            label="Tables"
+            value={totalTables.toString()}
           />
 
           <StatCard
-            label="Taux de remplissage"
+            label="Places réservées"
+            value={`${totalReserved}/${totalCapacity}`}
+          />
+
+          <StatCard
+            label="Remplissage"
             value={`${fillRate}%`}
           />
 
           <StatCard
-            label="Acomptes estimés"
-            value={`${estimatedDeposits.toFixed(
-              2
-            )} €`}
+            label="Décisions requises"
+            value={tablesToReview.toString()}
+            important={
+              tablesToReview > 0
+            }
           />
         </section>
 
+        {/* ==================================================
+            EVENTS
+        ================================================== */}
+
         <section className="mt-12">
-          <div className="mb-5 flex items-center justify-between">
+          <div>
             <h2 className="text-2xl font-semibold">
-              Événements
+              Soirées
             </h2>
 
-            <span className="text-sm text-zinc-500">
+            <p className="mt-2 text-sm text-zinc-500">
               {events.length} événement
-              {events.length > 1 ? "s" : ""}
-            </span>
+              {events.length > 1
+                ? "s"
+                : ""}
+            </p>
           </div>
 
-          <div className="space-y-5">
-            {events.length === 0 && (
-              <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-10 text-center">
-                <p className="text-zinc-400">
-                  Aucune soirée pour le moment.
-                </p>
-              </div>
-            )}
+          {events.length === 0 ? (
+            <div className="mt-8 rounded-3xl border border-zinc-800 bg-zinc-950 p-10 text-center">
+              <h3 className="text-xl font-semibold">
+                Aucune soirée
+              </h3>
 
-            {events.map((event) => {
-              const club = Array.isArray(
-                event.clubs
-              )
-                ? event.clubs[0]
-                : event.clubs;
+              <p className="mt-3 text-zinc-500">
+                Commence par créer une
+                soirée.
+              </p>
 
-              const offer =
-                event.vip_offers?.[0];
-
-              const capacity = Number(
-                offer?.capacity ?? 0
-              );
-
-              const reserved = Number(
-                offer?.spots_reserved ?? 0
-              );
-
-              const percentage =
-                capacity > 0
-                  ? Math.min(
-                      100,
-                      Math.round(
-                        (reserved / capacity) * 100
-                      )
+              <Link
+                href="/admin/events/new"
+                className="mt-6 inline-block rounded-full bg-white px-6 py-3 font-semibold text-black"
+              >
+                Créer une soirée
+              </Link>
+            </div>
+          ) : (
+            <div className="mt-8 grid gap-5">
+              {events.map(
+                (event) => {
+                  const club =
+                    Array.isArray(
+                      event.clubs
                     )
-                  : 0;
+                      ? event.clubs[0]
+                      : event.clubs;
 
-              const date =
-                new Date(
-                  `${event.event_date}T12:00:00`
-                ).toLocaleDateString("fr-FR", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                });
+                  const offers =
+                    event.vip_offers ??
+                    [];
 
-              return (
-                <article
-                  key={event.id}
-                  className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 md:p-8"
-                >
-                  <div className="flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <p className="text-sm text-zinc-500">
-                          {club?.name ??
-                            "Club inconnu"}
-                          {club?.city
-                            ? ` · ${club.city}`
-                            : ""}
-                        </p>
+                  const eventCapacity =
+                    offers.reduce(
+                      (
+                        total,
+                        offer
+                      ) =>
+                        total +
+                        Number(
+                          offer.capacity
+                        ),
+                      0
+                    );
 
-                        <span className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-400">
-                          {event.status}
-                        </span>
-                      </div>
+                  const eventReserved =
+                    offers.reduce(
+                      (
+                        total,
+                        offer
+                      ) =>
+                        total +
+                        Number(
+                          offer.spots_reserved
+                        ),
+                      0
+                    );
 
-                      <h3 className="mt-3 text-2xl font-semibold">
-                        {event.name}
-                      </h3>
+                  const reviewCount =
+                    offers.filter(
+                      (offer) =>
+                        offer.status ===
+                        "admin_review"
+                    ).length;
 
-                      <p className="mt-2 capitalize text-zinc-400">
-                        {date} ·{" "}
-                        {event.start_time?.slice(
-                          0,
-                          5
-                        )}
-                      </p>
+                  const formattedDate =
+                    new Date(
+                      `${event.event_date}T12:00:00`
+                    ).toLocaleDateString(
+                      "fr-FR",
+                      {
+                        weekday:
+                          "long",
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      }
+                    );
 
-                      {offer && (
-                        <div className="mt-6 max-w-xl">
-                          <div className="mb-2 flex justify-between text-sm">
-                            <span className="text-zinc-400">
-                              Remplissage
-                            </span>
+                  return (
+                    <Link
+                      key={event.id}
+                      href={`/admin/events/${event.id}`}
+                      className="group rounded-3xl border border-zinc-800 bg-zinc-950 p-6 transition hover:border-zinc-600"
+                    >
+                      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <p className="text-sm text-zinc-500">
+                            {club?.name ??
+                              "Club"}
 
-                            <span>
-                              {reserved} /{" "}
-                              {capacity}
-                            </span>
-                          </div>
+                            {club?.city
+                              ? ` · ${club.city}`
+                              : ""}
+                          </p>
 
-                          <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
-                            <div
-                              className="h-full rounded-full bg-white"
-                              style={{
-                                width: `${percentage}%`,
-                              }}
-                            />
-                          </div>
+                          <h3 className="mt-2 text-2xl font-semibold">
+                            {event.name}
+                          </h3>
 
-                          <div className="mt-4 flex flex-wrap gap-3 text-sm text-zinc-400">
-                            <span>
-                              {Number(
-                                offer.price_per_person
-                              ).toFixed(0)}
-                              € / personne
-                            </span>
+                          <p className="mt-2 capitalize text-zinc-400">
+                            {
+                              formattedDate
+                            }
 
-                            <span>·</span>
+                            {" · "}
 
-                            <span>
-                              Acompte{" "}
-                              {Number(
-                                offer.deposit_per_person
-                              ).toFixed(0)}
-                              €
-                            </span>
-                          </div>
+                            {event.start_time?.slice(
+                              0,
+                              5
+                            )}
+                          </p>
                         </div>
-                      )}
-                    </div>
 
-                    <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
-                      <Link
-                        href={`/admin/events/${event.id}`}
-                        className="rounded-full bg-white px-5 py-3 text-center text-sm font-semibold text-black transition hover:bg-zinc-200"
-                      >
-                        Gérer
-                      </Link>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <InfoBadge>
+                            {
+                              offers.length
+                            }{" "}
+                            table
+                            {offers.length >
+                            1
+                              ? "s"
+                              : ""}
+                          </InfoBadge>
 
-                      <Link
-                        href={`/events/${event.slug}`}
-                        className="rounded-full border border-zinc-700 px-5 py-3 text-center text-sm transition hover:border-white"
-                      >
-                        Voir côté client
-                      </Link>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                          <InfoBadge>
+                            {
+                              eventReserved
+                            }
+                            /
+                            {
+                              eventCapacity
+                            }{" "}
+                            places
+                          </InfoBadge>
+
+                          {reviewCount >
+                            0 && (
+                            <span className="rounded-full border border-amber-800 bg-amber-950/30 px-3 py-2 text-sm text-amber-400">
+                              {
+                                reviewCount
+                              }{" "}
+                              décision
+                              {reviewCount >
+                              1
+                                ? "s"
+                                : ""}{" "}
+                              requise
+                              {reviewCount >
+                              1
+                                ? "s"
+                                : ""}
+                            </span>
+                          )}
+
+                          <span className="text-zinc-600 transition group-hover:translate-x-1">
+                            →
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                }
+              )}
+            </div>
+          )}
         </section>
       </div>
     </main>
   );
 }
 
+// ============================================================
+// COMPONENTS
+// ============================================================
+
 function StatCard({
   label,
   value,
+  important = false,
 }: {
   label: string;
   value: string;
+  important?: boolean;
 }) {
   return (
-    <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6">
+    <div
+      className={`rounded-2xl border p-5 ${
+        important
+          ? "border-amber-900 bg-amber-950/20"
+          : "border-zinc-800 bg-zinc-950"
+      }`}
+    >
       <p className="text-sm text-zinc-500">
         {label}
       </p>
 
-      <p className="mt-3 text-3xl font-bold">
+      <p
+        className={`mt-2 text-2xl font-bold ${
+          important
+            ? "text-amber-400"
+            : "text-white"
+        }`}
+      >
         {value}
       </p>
     </div>
+  );
+}
+
+function InfoBadge({
+  children,
+}: {
+  children:
+    React.ReactNode;
+}) {
+  return (
+    <span className="rounded-full border border-zinc-800 px-3 py-2 text-sm text-zinc-400">
+      {children}
+    </span>
   );
 }

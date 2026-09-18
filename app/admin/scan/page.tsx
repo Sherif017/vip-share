@@ -1,30 +1,24 @@
 import { redirect } from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import {
+  getAdminAccess,
+} from "@/lib/admin-access";
 
 import ScanClient from "./ScanClient";
 
 export default async function ScanPage() {
-  const supabase = await createClient();
+  const access =
+    await getAdminAccess();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!access) {
     redirect("/login");
   }
 
-  const { data: profile } = await supabaseAdmin
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile?.is_admin) {
+  if (!access.canScanAnyClub) {
     redirect("/events");
   }
 
-  return <ScanClient />;
+  return (
+    <ScanClient />
+  );
 }

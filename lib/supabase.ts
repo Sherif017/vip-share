@@ -4,12 +4,6 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabasePublishableKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-console.log("SUPABASE URL =", supabaseUrl);
-console.log(
-  "SUPABASE KEY PRESENT =",
-  Boolean(supabasePublishableKey)
-);
-
 if (!supabaseUrl) {
   throw new Error("NEXT_PUBLIC_SUPABASE_URL manquante");
 }

@@ -1,41 +1,64 @@
-import { redirect } from "next/navigation";
+import {
+  redirect,
+} from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import {
+  getAdminAccess,
+} from "@/lib/admin-access";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabase-admin";
 
 import NewEventForm from "./NewEventForm";
 
 export default async function NewEventPage() {
-  const supabase = await createClient();
+  const access =
+    await getAdminAccess();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!access) {
     redirect("/login");
   }
 
-  const { data: profile } = await supabaseAdmin
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile?.is_admin) {
+  if (!access.canManageAnyClub) {
     redirect("/events");
   }
 
-  const { data: clubs } = await supabaseAdmin
-    .from("clubs")
-    .select("id, name, city")
-    .order("name", {
-      ascending: true,
-    });
+  let query =
+    supabaseAdmin
+      .from("clubs")
+      .select(
+        "id, name, city"
+      )
+      .order(
+        "name",
+        {
+          ascending: true,
+        }
+      );
+
+  if (!access.isManager) {
+    query = query.in(
+      "id",
+      access.managedClubIds
+    );
+  }
+
+  const {
+    data: clubs,
+    error,
+  } = await query;
+
+  if (error) {
+    console.error(
+      "Erreur récupération clubs :",
+      error
+    );
+  }
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto max-w-4xl px-6 py-12">
+      <div className="mx-auto max-w-5xl px-6 py-12">
         <div className="mb-10">
           <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
             VIP Share · Admin
@@ -45,12 +68,31 @@ export default async function NewEventPage() {
             Créer une soirée
           </h1>
 
-          <p className="mt-3 text-zinc-400">
-            Ajoute un événement et configure son offre VIP.
+          <p className="mt-3 max-w-2xl text-zinc-400">
+            Configure la soirée,
+            importe ses visuels,
+            définis le Deposit et
+            ajoute les différentes
+            tables disponibles.
           </p>
+
+          {!access.isManager && (
+            <div className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+              <p className="text-sm text-zinc-400">
+                La soirée sera créée dans
+                l&apos;un des clubs associés
+                à ton compte.
+              </p>
+            </div>
+          )}
         </div>
 
-        <NewEventForm clubs={clubs ?? []} />
+        <NewEventForm
+          clubs={clubs ?? []}
+          isManager={
+            access.isManager
+          }
+        />
       </div>
     </main>
   );

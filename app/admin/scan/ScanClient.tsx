@@ -25,11 +25,18 @@ type Result = {
 
     checkedIn: boolean;
     checkedInAt: string | null;
+
+    tableNumber: string;
+    tableCapacity: number;
+    tableExpected: number;
+    tableCheckedIn: number;
+    tableRemaining: number;
   };
 };
 
 export default function ScanClient() {
-  const [code, setCode] = useState("");
+  const [code, setCode] =
+    useState("");
 
   const [loading, setLoading] =
     useState(false);
@@ -47,8 +54,11 @@ export default function ScanClient() {
     setCameraError,
   ] = useState("");
 
-  const scannerRef =
-    useRef<any>(null);
+  const scannerRef = useRef<{
+    stop: () => Promise<void>;
+    clear: () => void;
+    getState?: () => number;
+  } | null>(null);
 
   const processingRef =
     useRef(false);
@@ -83,21 +93,22 @@ export default function ScanClient() {
     setResult(null);
 
     try {
-      const response = await fetch(
-        "/api/admin/check-in",
-        {
-          method: "POST",
+      const response =
+        await fetch(
+          "/api/admin/check-in",
+          {
+            method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
 
-          body: JSON.stringify({
-            code: cleanCode,
-          }),
-        }
-      );
+            body: JSON.stringify({
+              code: cleanCode,
+            }),
+          }
+        );
 
       const data =
         await response.json();
@@ -116,7 +127,9 @@ export default function ScanClient() {
 
       setResult({
         success:
-          Boolean(data.success),
+          Boolean(
+            data.success
+          ),
 
         message:
           data.message,
@@ -412,8 +425,7 @@ export default function ScanClient() {
           </h1>
 
           <p className="mt-3 text-zinc-400">
-            Scanne le QR code du pass VIP ou
-            saisis manuellement le code.
+            Scanne le QR code du pass VIP ou saisis manuellement le code.
           </p>
         </div>
 
@@ -427,8 +439,7 @@ export default function ScanClient() {
               </h2>
 
               <p className="mt-1 text-sm text-zinc-500">
-                Utilise de préférence la caméra
-                arrière du téléphone.
+                Utilise de préférence la caméra arrière du téléphone.
               </p>
             </div>
 
@@ -588,6 +599,8 @@ export default function ScanClient() {
 
             {result.reservation && (
               <>
+                {/* Réservation */}
+
                 <div className="mt-7 rounded-2xl border border-white/10 bg-black p-5">
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-600">
                     Réservation
@@ -637,6 +650,21 @@ export default function ScanClient() {
 
                     <div className="flex justify-between gap-4">
                       <span className="text-zinc-500">
+                        Table
+                      </span>
+
+                      <span className="text-right text-xl font-bold text-white">
+                        N°{" "}
+                        {
+                          result
+                            .reservation
+                            .tableNumber
+                        }
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between gap-4">
+                      <span className="text-zinc-500">
                         Places achetées
                       </span>
 
@@ -651,10 +679,124 @@ export default function ScanClient() {
                   </div>
                 </div>
 
-                {/* Compteur d'entrées */}
+                {/* État global de la table */}
+
+                <div className="mt-4 rounded-2xl border border-white/20 bg-white p-5 text-black">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                        Table
+                      </p>
+
+                      <p className="mt-2 text-3xl font-bold">
+                        N°{" "}
+                        {
+                          result
+                            .reservation
+                            .tableNumber
+                        }
+                      </p>
+
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Capacité :{" "}
+                        {
+                          result
+                            .reservation
+                            .tableCapacity
+                        }
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-xs text-zinc-500">
+                        Entrées table
+                      </p>
+
+                      <p className="mt-1 text-3xl font-bold">
+                        {
+                          result
+                            .reservation
+                            .tableCheckedIn
+                        }
+
+                        <span className="text-zinc-400">
+                          {" "}
+                          /{" "}
+                          {
+                            result
+                              .reservation
+                              .tableExpected
+                          }
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 h-2 overflow-hidden rounded-full bg-zinc-200">
+                    <div
+                      className="h-full rounded-full bg-black transition-all"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          Math.round(
+                            (
+                              result
+                                .reservation
+                                .tableCheckedIn /
+                              Math.max(
+                                result
+                                  .reservation
+                                  .tableExpected,
+                                1
+                              )
+                            ) * 100
+                          )
+                        )}%`,
+                      }}
+                    />
+                  </div>
+
+                  <div className="mt-4 flex justify-between gap-4 text-sm">
+                    <span className="text-zinc-600">
+                      {
+                        result
+                          .reservation
+                          .tableExpected
+                      }{" "}
+                      attendu
+                      {result
+                        .reservation
+                        .tableExpected >
+                      1
+                        ? "s"
+                        : ""}
+                    </span>
+
+                    <span className="font-semibold">
+                      {
+                        result
+                          .reservation
+                          .tableRemaining
+                      }{" "}
+                      restant
+                      {result
+                        .reservation
+                        .tableRemaining >
+                      1
+                        ? "s"
+                        : ""}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Compteur individuel */}
 
                 <div className="mt-4 rounded-2xl border border-zinc-800 bg-black p-5">
-                  <div className="flex items-end justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-600">
+                    Cette réservation
+                  </p>
+
+                  <div className="mt-4 flex items-end justify-between gap-4">
                     <div>
                       <p className="text-sm text-zinc-500">
                         Entrées utilisées
@@ -666,6 +808,7 @@ export default function ScanClient() {
                             .reservation
                             .checkedInQuantity
                         }
+
                         <span className="text-zinc-600">
                           {" "}
                           /{" "}
@@ -678,7 +821,7 @@ export default function ScanClient() {
                       </p>
                     </div>
 
-                    <p className="text-sm text-zinc-400">
+                    <p className="text-right text-sm text-zinc-400">
                       {
                         result
                           .reservation
@@ -701,16 +844,17 @@ export default function ScanClient() {
                         width: `${Math.min(
                           100,
                           Math.round(
-                            (result
-                              .reservation
-                              .checkedInQuantity /
+                            (
+                              result
+                                .reservation
+                                .checkedInQuantity /
                               Math.max(
                                 result
                                   .reservation
                                   .quantity,
                                 1
-                              )) *
-                              100
+                              )
+                            ) * 100
                           )
                         )}%`,
                       }}
