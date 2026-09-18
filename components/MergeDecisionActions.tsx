@@ -151,7 +151,7 @@ export default function MergeDecisionActions({
           type="button"
           onClick={() => decide("accept")}
           disabled={loadingChoice !== null}
-          className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+          className="kre-primary-cta rounded-full px-5 py-3 text-sm font-semibold transition"
         >
           {loadingChoice === "accept"
             ? "Validation..."

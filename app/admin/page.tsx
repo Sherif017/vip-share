@@ -186,7 +186,7 @@ export default async function AdminPage() {
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
-              VIP Share · Admin
+              K-RÉ · Admin
             </p>
 
             <h1 className="mt-3 text-4xl font-bold">
@@ -195,7 +195,7 @@ export default async function AdminPage() {
 
             <p className="mt-3 text-zinc-400">
               {access.isManager
-                ? "Vue globale de tous les clubs VIP Share."
+                ? "Vue globale de tous les clubs K-RÉ."
                 : "Gère les soirées et tables de ton club."}
             </p>
           </div>
@@ -219,7 +219,7 @@ export default async function AdminPage() {
 
             <Link
               href="/admin/events/new"
-              className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
+              className="rounded-full kre-primary-cta px-5 py-3 text-sm font-semibold transition hover:bg-zinc-200"
             >
               + Créer une soirée
             </Link>
@@ -291,7 +291,7 @@ export default async function AdminPage() {
 
               <Link
                 href="/admin/events/new"
-                className="mt-6 inline-block rounded-full bg-white px-6 py-3 font-semibold text-black"
+                className="mt-6 inline-block rounded-full kre-primary-cta px-6 py-3 font-semibold"
               >
                 Créer une soirée
               </Link>

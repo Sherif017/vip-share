@@ -231,7 +231,7 @@ export default function NewEventForm({
       !isManager
     ) {
       throw new Error(
-        "Seul le Manager VIP Share peut créer un nouveau club."
+        "Seul le Manager K-RÉ peut créer un nouveau club."
       );
     }
 
@@ -527,7 +527,7 @@ export default function NewEventForm({
                 className={`rounded-full px-4 py-2 text-sm transition ${
                   clubMode ===
                   "existing"
-                    ? "bg-white text-black"
+                    ? "kre-primary-cta"
                     : "border border-zinc-700 text-zinc-300"
                 }`}
               >
@@ -542,7 +542,7 @@ export default function NewEventForm({
               }
               className={`rounded-full px-4 py-2 text-sm transition ${
                 clubMode === "new"
-                  ? "bg-white text-black"
+                  ? "kre-primary-cta"
                   : "border border-zinc-700 text-zinc-300"
               }`}
             >
@@ -978,7 +978,7 @@ directement sur place.
         <button
           type="submit"
           disabled={loading}
-          className="rounded-full bg-white px-8 py-4 font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-full kre-primary-cta px-8 py-4 font-semibold transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading
             ? "Création..."

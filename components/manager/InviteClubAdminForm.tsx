@@ -90,7 +90,7 @@ export default function InviteClubAdminForm({
         <div>
           <label
             htmlFor="firstname"
-            className="mb-2 block text-sm font-medium text-gray-800"
+            className="mb-2 block text-sm font-medium text-[#D7D2C8]"
           >
             Prénom
           </label>
@@ -103,7 +103,7 @@ export default function InviteClubAdminForm({
               setFirstname(event.target.value)
             }
             required
-            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-black"
+            className="w-full rounded-xl border border-white/15 bg-[#111111] px-4 py-3 outline-none transition focus:border-[#D8B56A]"
             placeholder="Alex"
           />
         </div>
@@ -111,7 +111,7 @@ export default function InviteClubAdminForm({
         <div>
           <label
             htmlFor="lastname"
-            className="mb-2 block text-sm font-medium text-gray-800"
+            className="mb-2 block text-sm font-medium text-[#D7D2C8]"
           >
             Nom
           </label>
@@ -124,7 +124,7 @@ export default function InviteClubAdminForm({
               setLastname(event.target.value)
             }
             required
-            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-black"
+            className="w-full rounded-xl border border-white/15 bg-[#111111] px-4 py-3 outline-none transition focus:border-[#D8B56A]"
             placeholder="Dupont"
           />
         </div>
@@ -133,7 +133,7 @@ export default function InviteClubAdminForm({
       <div>
         <label
           htmlFor="email"
-          className="mb-2 block text-sm font-medium text-gray-800"
+          className="mb-2 block text-sm font-medium text-[#D7D2C8]"
         >
           Adresse email
         </label>
@@ -147,22 +147,22 @@ export default function InviteClubAdminForm({
           }
           required
           autoComplete="email"
-          className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-black"
+          className="w-full rounded-xl border border-white/15 bg-[#111111] px-4 py-3 outline-none transition focus:border-[#D8B56A]"
           placeholder="alex@email.com"
         />
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-gray-800">
+        <label className="mb-2 block text-sm font-medium text-[#D7D2C8]">
           Rôle
         </label>
 
-        <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-          <p className="font-medium text-gray-900">
+        <div className="rounded-xl border border-white/10 bg-[#080808] px-4 py-3">
+          <p className="font-medium text-[#F7F4EE]">
             Administrateur du club
           </p>
 
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-[#858585]">
             Peut gérer les soirées, tables,
             réservations et scanner du club.
           </p>
@@ -184,7 +184,7 @@ export default function InviteClubAdminForm({
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-xl bg-black px-5 py-3 font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-xl bg-black px-5 py-3 font-semibold text-white transition hover:bg-[#F2D99B] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading
           ? "Envoi en cours..."

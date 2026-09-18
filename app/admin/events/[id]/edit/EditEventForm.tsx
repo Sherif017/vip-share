@@ -1099,7 +1099,7 @@ export default function EditEventForm({
           disabled={
             loading
           }
-          className="rounded-full bg-white px-8 py-4 font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-50"
+          className="rounded-full kre-primary-cta px-8 py-4 font-semibold transition hover:bg-zinc-200 disabled:opacity-50"
         >
           {loading
             ? "Enregistrement..."

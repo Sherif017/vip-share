@@ -66,37 +66,37 @@ export default async function ManagerPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-[#080808]">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-10">
-          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-gray-500">
-            VIP Share
+          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-[#858585]">
+            K-RÉ
           </p>
 
-          <h1 className="text-3xl font-bold text-gray-950">
+          <h1 className="text-3xl font-bold text-[#F7F4EE]">
             Espace Manager
           </h1>
 
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-[#A7A7A7]">
             Gérez les clubs et leurs comptes administrateurs.
           </p>
         </div>
 
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-gray-950">
+            <h2 className="text-xl font-semibold text-[#F7F4EE]">
               Clubs
             </h2>
 
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-[#858585]">
               {clubs.length} club{clubs.length > 1 ? "s" : ""}
             </p>
           </div>
         </div>
 
         {clubs.length === 0 ? (
-          <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
-            <p className="text-gray-600">
+          <div className="rounded-2xl border border-white/10 bg-[#111111] p-8 text-center">
+            <p className="text-[#A7A7A7]">
               Aucun club n&apos;est encore enregistré.
             </p>
           </div>
@@ -110,32 +110,32 @@ export default async function ManagerPage() {
                 <Link
                   key={club.id}
                   href={`/manager/clubs/${club.id}`}
-                  className="group rounded-2xl border border-gray-200 bg-white p-6 transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
+                  className="group rounded-2xl border border-white/10 bg-[#111111] p-6 transition hover:-translate-y-0.5 hover:border-white/15 hover:shadow-[0_18px_50px_rgba(0,0,0,.28)]"
                 >
                   <div className="mb-6 flex items-start justify-between gap-4">
                     <div>
-                      <h3 className="text-xl font-bold text-gray-950">
+                      <h3 className="text-xl font-bold text-[#F7F4EE]">
                         {club.name}
                       </h3>
 
-                      <p className="mt-1 text-sm text-gray-500">
+                      <p className="mt-1 text-sm text-[#858585]">
                         {club.city}
                       </p>
                     </div>
 
-                    <div className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                    <div className="rounded-full bg-white/[0.07] px-3 py-1 text-xs font-semibold text-[#C0BBB1]">
                       {admins} admin{admins > 1 ? "s" : ""}
                     </div>
                   </div>
 
                   {club.address && (
-                    <p className="mb-5 text-sm text-gray-600">
+                    <p className="mb-5 text-sm text-[#A7A7A7]">
                       {club.address}
                     </p>
                   )}
 
-                  <div className="flex items-center justify-between border-t border-gray-100 pt-4">
-                    <span className="text-sm font-medium text-gray-700">
+                  <div className="flex items-center justify-between border-t border-white/[0.07] pt-4">
+                    <span className="text-sm font-medium text-[#C0BBB1]">
                       Gérer le club
                     </span>
 

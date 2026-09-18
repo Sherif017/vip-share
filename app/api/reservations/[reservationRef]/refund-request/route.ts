@@ -200,7 +200,7 @@ export async function POST(
       return NextResponse.json(
         {
           error:
-            "Le supplément a déjà été payé. Contacte VIP Share pour modifier ta réservation.",
+            "Le supplément a déjà été payé. Contacte K-RÉ pour modifier ta réservation.",
         },
         {
           status: 400,

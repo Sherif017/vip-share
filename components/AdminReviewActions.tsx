@@ -272,7 +272,7 @@ export default function AdminReviewActions({
             type="button"
             onClick={acceptAsIs}
             disabled={busy}
-            className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full kre-primary-cta px-5 py-3 text-sm font-semibold transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Confirmation..." : "Accepter telle quelle"}
           </button>

@@ -1,25 +1,25 @@
 export default function TermsPage() {
   return (
-    <main className="min-h-screen bg-black text-white">
-      <section className="mx-auto max-w-3xl px-6 py-14">
+    <main className="kre-customer min-h-screen bg-black text-white">
+      <section className="mx-auto max-w-3xl px-5 py-10 sm:px-8 sm:py-14">
 
-        <p className="mb-3 text-sm uppercase tracking-[0.3em] text-zinc-500">
-          VIP Share
+        <p className="eyebrow text-champagne">
+          K-RÉ
         </p>
 
-        <h1 className="text-4xl font-bold">
+        <h1 className="mt-3 font-display text-4xl text-cream sm:text-5xl">
           Conditions de réservation
         </h1>
 
-        <div className="mt-10 space-y-10 text-zinc-400 leading-relaxed">
+        <div className="mt-10 space-y-10 text-muted leading-relaxed">
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               1. Objet
             </h2>
 
             <p>
-              VIP Share permet à plusieurs participants
+              K-RÉ permet à plusieurs participants
               de réserver individuellement des places
               au sein d&apos;une même table VIP proposée
               pour un événement partenaire.
@@ -27,7 +27,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               2. Réservation
             </h2>
 
@@ -46,7 +46,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               3. Prix
             </h2>
 
@@ -64,12 +64,12 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               4. Tables partagées
             </h2>
 
             <p>
-              Les utilisateurs de VIP Share réservent
+              Les utilisateurs de K-RÉ réservent
               des places individuelles sur une table
               pouvant être partagée avec d&apos;autres
               participants.
@@ -83,7 +83,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               5. Nombre de participants
             </h2>
 
@@ -101,7 +101,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               6. Présentation du pass
             </h2>
 
@@ -124,7 +124,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               7. Annulation
             </h2>
 
@@ -137,12 +137,12 @@ export default function TermsPage() {
             <p className="mt-3">
               Lorsqu&apos;un remboursement est dû,
               celui-ci est effectué selon les modalités
-              précisées par VIP Share.
+              précisées par K-RÉ.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               8. Accès à l&apos;établissement
             </h2>
 
@@ -161,7 +161,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               9. Paiement
             </h2>
 
@@ -171,14 +171,14 @@ export default function TermsPage() {
             </p>
 
             <p className="mt-3">
-              VIP Share ne conserve pas directement les
+              K-RÉ ne conserve pas directement les
               données complètes de carte bancaire des
               utilisateurs.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               10. Contact
             </h2>
 
@@ -188,7 +188,7 @@ export default function TermsPage() {
             </p>
 
             <p className="mt-2 text-white">
-              [EMAIL DE CONTACT]
+              [TODO : adresse de contact TAVYX à compléter]
             </p>
           </section>
 

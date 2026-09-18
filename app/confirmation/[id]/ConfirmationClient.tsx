@@ -103,15 +103,15 @@ export default function ConfirmationClient({
     });
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="kre-customer min-h-screen bg-black text-white">
       <section className="mx-auto max-w-3xl px-6 py-14">
         <div className="mb-10 text-center">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl text-black">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#111111] text-3xl text-black">
             ✓
           </div>
 
           <p className="mb-3 text-sm uppercase tracking-[0.3em] text-zinc-500">
-            VIP Share
+            K-RÉ
           </p>
 
           <h1 className="text-4xl font-bold md:text-5xl">
@@ -125,7 +125,7 @@ export default function ConfirmationClient({
 
         {/* TABLE */}
 
-        <div className="mb-5 rounded-3xl border border-white/20 bg-white p-7 text-black">
+        <div className="mb-5 rounded-3xl border border-white/20 bg-[#111111] p-7 text-black">
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-zinc-500">
             Ta table
           </p>
@@ -133,7 +133,7 @@ export default function ConfirmationClient({
           <div className="mt-3 flex items-end justify-between gap-5">
             <div>
               <p className="text-4xl font-bold md:text-5xl">
-                Table n°{tableNumber}
+                K-RÉ {tableNumber}
               </p>
 
               <p className="mt-3 text-sm text-zinc-600">
@@ -268,10 +268,10 @@ export default function ConfirmationClient({
               </p>
 
               <p className="mb-5 font-semibold">
-                Table n°{tableNumber}
+                K-RÉ {tableNumber}
               </p>
 
-              <div className="rounded-2xl bg-white p-5">
+              <div className="rounded-2xl bg-[#111111] p-5">
                 <QRCodeSVG
                   value={
                     qrValue
@@ -312,7 +312,7 @@ export default function ConfirmationClient({
 
           <Link
             href="/events"
-            className="rounded-2xl bg-white py-4 text-center font-semibold text-black transition hover:bg-zinc-200"
+            className="kre-primary-cta rounded-2xl py-4 text-center font-semibold transition"
           >
             Voir les autres soirées
           </Link>

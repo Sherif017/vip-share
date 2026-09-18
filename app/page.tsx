@@ -1,225 +1,106 @@
 import Link from "next/link";
 
+import PageContainer from "@/components/ui/PageContainer";
+
+const steps = [
+  {
+    number: "01",
+    title: "Choisis ta soirée",
+    text: "Découvre les prochaines soirées et les tables VIP disponibles dans les clubs partenaires.",
+  },
+  {
+    number: "02",
+    title: "Réserve tes places",
+    text: "Choisis le nombre de places dont tu as besoin et règle uniquement le Deposit demandé en ligne.",
+  },
+  {
+    number: "03",
+    title: "Profite de ta table VIP",
+    text: "Présente ta réservation à ton arrivée et profite de la soirée avec les autres participants de la table.",
+  },
+];
+
 export default function HomePage() {
   return (
-    <main className="bg-black text-white">
-
-      {/* =========================================================
-          HERO
-      ========================================================== */}
-
-      <section className="mx-auto flex min-h-[calc(100vh-73px)] max-w-7xl flex-col px-6">
-
-        <div className="flex flex-1 flex-col justify-center py-20">
-
-          <div className="max-w-3xl">
-
-            <p className="mb-4 text-sm uppercase tracking-[0.3em] text-white/50">
-              Shared VIP Experiences
-            </p>
-
-            <h1 className="text-5xl font-bold leading-tight md:text-7xl">
-              La table VIP.
-              <br />
-              Sans payer toute la table.
+    <main className="bg-ink">
+      <PageContainer>
+        <section className="kre-landing-hero" aria-labelledby="landing-title">
+          <div className="kre-landing-hero-grid">
+            <div className="relative z-10 max-w-4xl">
+            <p className="eyebrow text-champagne">L&apos;expérience VIP, à ta place.</p>
+            <h1 id="landing-title" className="kre-landing-title">
+              La table VIP.<br />
+              <span>Sans payer toute la table.</span>
             </h1>
-
-            <p className="mt-6 max-w-xl text-lg leading-8 text-white/60">
-              Rejoins d&apos;autres personnes et réserve
-              ta place dans une table VIP des meilleurs
-              clubs.
+            <p className="kre-landing-lede">
+              Réserve uniquement les places dont tu as besoin sur les tables VIP des clubs partenaires.
             </p>
-
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-
-              <Link
-                href="/events"
-                className="rounded-full bg-white px-7 py-4 text-center font-semibold text-black transition hover:bg-zinc-200"
-              >
-                Découvrir les soirées
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Link href="/events" className="kre-primary-cta kre-landing-cta inline-flex min-h-12 items-center justify-center rounded-full px-7 py-3 text-center text-sm font-semibold transition">
+                Découvrir les soirées <span className="ml-2" aria-hidden="true">→</span>
               </Link>
-
-              <a
-                href="#comment-ca-marche"
-                className="rounded-full border border-white/20 px-7 py-4 text-center font-semibold transition hover:border-white/40 hover:bg-white/5"
-              >
+              <a href="#comment-ca-marche" className="kre-landing-secondary inline-flex min-h-12 items-center justify-center rounded-full px-7 py-3 text-sm font-medium text-cream transition">
                 Comment ça marche ?
               </a>
-
             </div>
-
-          </div>
-
-        </div>
-
-        <div className="border-t border-white/10 py-6 text-sm text-white/40">
-          Paris · Malta · More cities soon
-        </div>
-
-      </section>
-
-      {/* =========================================================
-          COMMENT ÇA MARCHE
-      ========================================================== */}
-
-      <section
-        id="comment-ca-marche"
-        className="scroll-mt-24 border-t border-white/10"
-      >
-
-        <div className="mx-auto max-w-7xl px-6 py-24 md:py-32">
-
-          {/* TITRE */}
-
-          <div className="max-w-2xl">
-
-            <p className="mb-4 text-sm uppercase tracking-[0.3em] text-white/40">
-              Simple et rapide
-            </p>
-
-            <h2 className="text-4xl font-bold md:text-5xl">
-              Comment ça marche ?
-            </h2>
-
-            <p className="mt-5 text-lg leading-8 text-zinc-400">
-              Profite d&apos;une expérience VIP sans avoir
-              à réserver une table entière.
-            </p>
-
-          </div>
-
-          {/* ÉTAPES */}
-
-          <div className="mt-16 grid gap-5 md:grid-cols-3">
-
-            {/* 01 */}
-
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-7 md:p-8">
-
-              <div className="mb-10 flex h-12 w-12 items-center justify-center rounded-full border border-zinc-700 text-sm font-semibold">
-                01
-              </div>
-
-              <h3 className="text-xl font-semibold">
-                Choisis ta soirée
-              </h3>
-
-              <p className="mt-3 leading-7 text-zinc-400">
-                Découvre les prochaines soirées et les
-                tables VIP disponibles dans les clubs
-                partenaires.
-              </p>
-
+            <div className="kre-landing-promise" aria-label="Une place, un prix clair, une table VIP">
+              <span>Une place</span><i aria-hidden="true">•</i><span>Un prix clair</span><i aria-hidden="true">•</i><span>Une table VIP</span>
             </div>
-
-            {/* 02 */}
-
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-7 md:p-8">
-
-              <div className="mb-10 flex h-12 w-12 items-center justify-center rounded-full border border-zinc-700 text-sm font-semibold">
-                02
-              </div>
-
-              <h3 className="text-xl font-semibold">
-                Réserve tes places
-              </h3>
-
-              <p className="mt-3 leading-7 text-zinc-400">
-                Choisis le nombre de places dont tu as
-                besoin et paie uniquement le Deposit
-                en ligne.
-              </p>
-
             </div>
-
-            {/* 03 */}
-
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-7 md:p-8">
-
-              <div className="mb-10 flex h-12 w-12 items-center justify-center rounded-full border border-zinc-700 text-sm font-semibold">
-                03
-              </div>
-
-              <h3 className="text-xl font-semibold">
-                Profite de ta table VIP
-              </h3>
-
-              <p className="mt-3 leading-7 text-zinc-400">
-                Présente ton pass VIP à ton arrivée,
-                retrouve les autres participants et
-                profite de la soirée.
-              </p>
-
+            <div className="kre-landing-orbit" aria-hidden="true">
+              <span className="kre-landing-orbit-line" />
+              <span className="kre-landing-orbit-ring kre-landing-orbit-ring-main" />
+              <span className="kre-landing-orbit-ring kre-landing-orbit-ring-small" />
+              <span className="kre-landing-orbit-mark">01</span>
+              <span className="kre-landing-orbit-caption">Paris · tables VIP</span>
             </div>
-
           </div>
+        </section>
 
-          {/* EXPLICATION PRIX */}
+        <section id="comment-ca-marche" className="kre-landing-section kre-landing-how scroll-mt-24" aria-labelledby="how-title">
+          <div className="kre-landing-section-heading">
+            <p className="eyebrow text-champagne">Simple, naturellement</p>
+            <h2 id="how-title" className="mt-3 font-display text-4xl tracking-[-0.04em] text-cream sm:text-5xl">Comment ça marche ?</h2>
+            <p className="mt-5 text-base leading-7 text-muted sm:text-lg">L&apos;expérience VIP sans avoir à réserver une table entière.</p>
+          </div>
+          <div className="kre-landing-steps">
+            {steps.map((step, index) => (
+              <article key={step.number} className="kre-step-card">
+                <div className="flex items-start justify-between gap-4">
+                  <p className="kre-step-number">{step.number}</p>
+                  {index < steps.length - 1 && <span className="kre-step-connector" aria-hidden="true">↗</span>}
+                </div>
+                <h3 className="mt-12 text-xl font-semibold tracking-tight text-cream">{step.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-muted">{step.text}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
-          <div className="mt-16 rounded-3xl border border-zinc-800 bg-zinc-950 p-8 md:p-10">
-
-            <div className="grid gap-8 md:grid-cols-2 md:items-center">
-
-              <div>
-
-                <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
-                  Le principe
-                </p>
-
-                <h3 className="mt-3 text-3xl font-bold">
-                  Partage la table.
-                  <br />
-                  Pas la qualité.
-                </h3>
-
-              </div>
-
-              <div className="space-y-4 text-zinc-400">
-
-                <p>
-                  Une table VIP coûte normalement plusieurs
-                  centaines ou milliers d&apos;euros.
-                </p>
-
-                <p>
-                  Avec VIP Share, le coût est réparti entre
-                  plusieurs participants. Tu ne réserves
-                  donc que le nombre de places dont tu as
-                  réellement besoin.
-                </p>
-
-                <p className="font-medium text-white">
-                  Tu connais toujours le prix avant de
-                  réserver.
-                </p>
-
-              </div>
-
+        <section className="kre-landing-section kre-landing-principle" aria-labelledby="principle-title">
+          <div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-start lg:gap-20">
+            <div>
+              <p className="eyebrow text-champagne">Le principe</p>
+              <h2 id="principle-title" className="mt-3 max-w-md font-display text-4xl leading-[.98] tracking-[-0.04em] text-cream sm:text-6xl">Ta place.<br />Pas toute la table.</h2>
             </div>
-
+            <div className="kre-principle-copy max-w-2xl space-y-5 text-base leading-7 text-muted sm:text-lg sm:leading-8">
+              <p>Une table VIP peut représenter un budget important. K-RÉ permet de réserver seulement le nombre de places dont tu as réellement besoin.</p>
+              <p>Le prix de ta place est affiché avant la réservation.</p>
+              <p>Tu règles le Deposit en ligne, puis le montant restant est payé sur place selon les conditions de la réservation.</p>
+              <p className="kre-principle-promise"><span aria-hidden="true">✓</span> Tu connais toujours le prix avant de réserver.</p>
+            </div>
           </div>
+        </section>
 
-          {/* CTA */}
-
-          <div className="mt-16 text-center">
-
-            <h3 className="text-3xl font-bold">
-              Prêt pour ta prochaine soirée ?
-            </h3>
-
-            <Link
-              href="/events"
-              className="mt-7 inline-block rounded-full bg-white px-8 py-4 font-semibold text-black transition hover:bg-zinc-200"
-            >
-              Voir les soirées
-            </Link>
-
-          </div>
-
-        </div>
-
-      </section>
-
+        <section className="kre-landing-final" aria-labelledby="final-title">
+          <p className="eyebrow text-champagne">Ta prochaine soirée</p>
+          <h2 id="final-title" className="mt-4 font-display text-4xl leading-none tracking-[-0.04em] text-cream sm:text-6xl">Ta place en VIP<br />t&apos;attend.</h2>
+          <p className="mx-auto mt-5 max-w-md text-base text-muted">Découvre les prochaines tables disponibles.</p>
+          <Link href="/events" className="kre-primary-cta kre-landing-cta mt-8 inline-flex min-h-12 items-center justify-center rounded-full px-7 py-3 text-sm font-semibold transition">
+            Voir les soirées <span className="ml-2" aria-hidden="true">→</span>
+          </Link>
+        </section>
+      </PageContainer>
     </main>
   );
 }

@@ -623,7 +623,7 @@ export default async function AdminEventPage({
 
             <Link
               href={`/admin/events/${event.id}/edit`}
-              className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
+              className="rounded-full kre-primary-cta px-5 py-3 text-sm font-semibold transition hover:bg-zinc-200"
             >
               Modifier
             </Link>
@@ -1546,7 +1546,7 @@ export default async function AdminEventPage({
 
                                               <div className="mt-2 h-1.5 w-20 overflow-hidden rounded-full bg-zinc-800">
                                                 <div
-                                                  className="h-full rounded-full bg-white transition-all"
+                                                  className="h-full rounded-full bg-[#111111] transition-all"
                                                   style={{
                                                     width: `${progress}%`,
                                                   }}
@@ -1760,7 +1760,7 @@ function ProgressBar({
   return (
     <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-zinc-800">
       <div
-        className="h-full rounded-full bg-white transition-all"
+        className="h-full rounded-full bg-[#111111] transition-all"
         style={{
           width: `${Math.min(
             Math.max(
@@ -2054,7 +2054,7 @@ function TableStatusBadge({
     status === "full"
   ) {
     return (
-      <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-white">
+      <span className="rounded-full border border-white/20 bg-[#111111]/10 px-3 py-1 text-xs font-medium text-white">
         Complète
       </span>
     );

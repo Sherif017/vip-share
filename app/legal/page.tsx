@@ -1,49 +1,49 @@
 export default function LegalPage() {
   return (
-    <main className="min-h-screen bg-black text-white">
-      <section className="mx-auto max-w-3xl px-6 py-14">
-        <p className="mb-3 text-sm uppercase tracking-[0.3em] text-zinc-500">
-          VIP Share
+    <main className="kre-customer min-h-screen bg-black text-white">
+      <section className="mx-auto max-w-3xl px-5 py-10 sm:px-8 sm:py-14">
+        <p className="eyebrow text-champagne">
+          K-RÉ
         </p>
 
-        <h1 className="text-4xl font-bold">
+        <h1 className="mt-3 font-display text-4xl text-cream sm:text-5xl">
           Mentions légales
         </h1>
 
-        <div className="mt-10 space-y-10 text-zinc-400 leading-relaxed">
+        <div className="mt-10 space-y-10 text-muted leading-relaxed">
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               Éditeur du site
             </h2>
 
             <p>
-              Le site VIP Share est édité par :
+              Le site K-RÉ est édité par :
             </p>
 
             <div className="mt-3 space-y-1">
-              <p>[NOM DE LA SOCIÉTÉ]</p>
-              <p>[FORME JURIDIQUE]</p>
-              <p>[ADRESSE DU SIÈGE SOCIAL]</p>
-              <p>[NUMÉRO D&apos;IMMATRICULATION]</p>
-              <p>[NUMÉRO DE TVA SI APPLICABLE]</p>
-              <p>Email : [EMAIL DE CONTACT]</p>
+              <p>TAVYX</p>
+              <p>[TODO : forme juridique à compléter]</p>
+              <p>[TODO : adresse du siège social à compléter]</p>
+              <p>[TODO : numéro d&apos;immatriculation à compléter]</p>
+              <p>[TODO : numéro de TVA, si applicable]</p>
+              <p>Email : [TODO : adresse de contact TAVYX à compléter]</p>
             </div>
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               Directeur de publication
             </h2>
 
             <p>
               Le directeur de publication est
-              [NOM DU RESPONSABLE].
+              [TODO : directeur de publication TAVYX à compléter].
             </p>
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               Hébergement
             </h2>
 
@@ -64,13 +64,13 @@ export default function LegalPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               Propriété intellectuelle
             </h2>
 
             <p>
               L&apos;ensemble des contenus présents sur
-              VIP Share, notamment les textes, éléments
+              K-RÉ, notamment les textes, éléments
               graphiques, logos et interfaces, est
               protégé par les règles applicables en
               matière de propriété intellectuelle.
@@ -84,16 +84,16 @@ export default function LegalPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               Contact
             </h2>
 
             <p>
-              Pour toute question concernant VIP Share :
+              Pour toute question concernant K-RÉ :
             </p>
 
             <p className="mt-2 text-white">
-              [EMAIL DE CONTACT]
+              [TODO : adresse de contact TAVYX à compléter]
             </p>
           </section>
 

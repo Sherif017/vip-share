@@ -251,7 +251,7 @@ export default function SupplementDecisionActions({
           type="button"
           onClick={paySupplement}
           disabled={paymentLoading}
-          className="mt-5 rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+          className="kre-primary-cta mt-5 rounded-full px-6 py-3 text-sm font-semibold transition"
         >
           {paymentLoading
             ? "Redirection vers Stripe..."
@@ -407,7 +407,7 @@ export default function SupplementDecisionActions({
           disabled={
             loadingChoice !== null
           }
-          className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+          className="kre-primary-cta rounded-full px-5 py-3 text-sm font-semibold transition"
         >
           {loadingChoice ===
           "maintain"

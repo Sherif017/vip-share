@@ -1,26 +1,26 @@
 export default function PrivacyPage() {
   return (
-    <main className="min-h-screen bg-black text-white">
-      <section className="mx-auto max-w-3xl px-6 py-14">
+    <main className="kre-customer min-h-screen bg-black text-white">
+      <section className="mx-auto max-w-3xl px-5 py-10 sm:px-8 sm:py-14">
 
-        <p className="mb-3 text-sm uppercase tracking-[0.3em] text-zinc-500">
-          VIP Share
+        <p className="eyebrow text-champagne">
+          K-RÉ
         </p>
 
-        <h1 className="text-4xl font-bold">
+        <h1 className="mt-3 font-display text-4xl text-cream sm:text-5xl">
           Politique de confidentialité
         </h1>
 
-        <div className="mt-10 space-y-10 text-zinc-400 leading-relaxed">
+        <div className="mt-10 space-y-10 text-muted leading-relaxed">
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               Données collectées
             </h2>
 
             <p>
               Dans le cadre de l&apos;utilisation de
-              VIP Share, certaines informations peuvent
+              K-RÉ, certaines informations peuvent
               être collectées, notamment :
             </p>
 
@@ -34,7 +34,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               Utilisation des données
             </h2>
 
@@ -54,31 +54,31 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               Paiements
             </h2>
 
             <p>
               Les paiements sont traités par Stripe.
-              VIP Share ne stocke pas directement les
+              K-RÉ ne stocke pas directement les
               données complètes de carte bancaire.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               Hébergement et services techniques
             </h2>
 
             <p>
-              VIP Share utilise notamment des services
+              K-RÉ utilise notamment des services
               techniques fournis par Supabase, Vercel
               et Stripe.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               Conservation
             </h2>
 
@@ -91,12 +91,12 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               Vos droits
             </h2>
 
             <p>
-              Vous pouvez contacter VIP Share pour toute
+              Vous pouvez contacter K-RÉ pour toute
               demande concernant l&apos;accès, la
               rectification ou la suppression de vos
               données personnelles.
@@ -105,13 +105,13 @@ export default function PrivacyPage() {
             <p className="mt-3">
               Contact :
               <span className="ml-1 text-white">
-                [EMAIL DE CONTACT]
+                [TODO : adresse de contact TAVYX à compléter]
               </span>
             </p>
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-white">
+            <h2 className="mb-3 text-xl font-semibold text-cream">
               Mise à jour
             </h2>
 

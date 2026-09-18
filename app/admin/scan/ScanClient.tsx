@@ -232,7 +232,7 @@ export default function ScanClient() {
             decodedText;
 
           /*
-           * Le QR VIP Share contient :
+           * Le QR K-RÉ contient :
            *
            * {
            *   type: "vip-share-reservation",
@@ -417,7 +417,7 @@ export default function ScanClient() {
       <div className="mx-auto max-w-xl px-6 py-12">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
-            VIP Share · Admin
+            K-RÉ · Admin
           </p>
 
           <h1 className="mt-3 text-4xl font-bold">
@@ -464,7 +464,7 @@ export default function ScanClient() {
               disabled={
                 loading
               }
-              className="mt-5 w-full rounded-full bg-white py-4 font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-5 w-full rounded-full kre-primary-cta py-4 font-semibold transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Ouvrir la caméra
             </button>
@@ -537,7 +537,7 @@ export default function ScanClient() {
               loading ||
               !code.trim()
             }
-            className="mt-5 w-full rounded-full bg-white py-4 font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-5 w-full rounded-full kre-primary-cta py-4 font-semibold transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading
               ? "Vérification..."
@@ -681,7 +681,7 @@ export default function ScanClient() {
 
                 {/* État global de la table */}
 
-                <div className="mt-4 rounded-2xl border border-white/20 bg-white p-5 text-black">
+                <div className="mt-4 rounded-2xl border border-white/20 bg-[#111111] p-5 text-black">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
@@ -839,7 +839,7 @@ export default function ScanClient() {
 
                   <div className="mt-5 h-2 overflow-hidden rounded-full bg-zinc-800">
                     <div
-                      className="h-full rounded-full bg-white transition-all"
+                      className="h-full rounded-full bg-[#111111] transition-all"
                       style={{
                         width: `${Math.min(
                           100,

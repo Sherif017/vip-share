@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (!access.isManager) {
       return NextResponse.json(
         {
-          error: "Accès réservé au Manager VIP Share.",
+          error: "Accès réservé au Manager K-RÉ.",
         },
         {
           status: 403,

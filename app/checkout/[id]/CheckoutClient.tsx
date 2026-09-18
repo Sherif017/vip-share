@@ -189,7 +189,7 @@ export default function CheckoutClient({
   }
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="kre-customer min-h-screen bg-black text-white">
       <section className="mx-auto max-w-5xl px-6 py-14">
         <Link
           href={`/booking/${slug}?table=${encodeURIComponent(
@@ -322,7 +322,7 @@ export default function CheckoutClient({
                 disabled={
                   loading
                 }
-                className="mt-8 w-full rounded-2xl bg-white py-4 font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                className="kre-primary-cta mt-8 w-full rounded-2xl py-4 font-semibold transition"
               >
                 {loading
                   ? "Redirection vers Stripe..."
@@ -348,7 +348,7 @@ export default function CheckoutClient({
               </p>
 
               <p className="mt-3 text-sm font-medium">
-                Table n°
+                K-RÉ
                 {tableNumber}
               </p>
 

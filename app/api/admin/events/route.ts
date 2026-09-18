@@ -592,7 +592,7 @@ export async function POST(
         return NextResponse.json(
           {
             error:
-              "Seul le Manager VIP Share peut créer un nouveau club.",
+              "Seul le Manager K-RÉ peut créer un nouveau club.",
           },
           {
             status: 403,
@@ -1077,7 +1077,7 @@ export async function POST(
              * avec le système Stripe actuel :
              *
              * deposit_per_person =
-             * commission VIP Share.
+             * commission K-RÉ.
              */
             deposit_per_person:
               commissionPerPerson,

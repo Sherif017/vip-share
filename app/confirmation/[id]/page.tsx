@@ -201,7 +201,7 @@ export default async function ConfirmationPage({
           <div className="mx-auto mb-7 h-16 w-16 animate-spin rounded-full border-2 border-zinc-700 border-t-white" />
 
           <p className="mb-3 text-sm uppercase tracking-[0.3em] text-zinc-500">
-            VIP Share
+            K-RÉ
           </p>
 
           <h1 className="text-3xl font-bold md:text-4xl">

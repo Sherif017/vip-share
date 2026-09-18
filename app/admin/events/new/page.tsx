@@ -61,7 +61,7 @@ export default async function NewEventPage() {
       <div className="mx-auto max-w-5xl px-6 py-12">
         <div className="mb-10">
           <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
-            VIP Share · Admin
+            K-RÉ · Admin
           </p>
 
           <h1 className="mt-3 text-4xl font-bold">

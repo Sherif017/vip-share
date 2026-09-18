@@ -91,25 +91,25 @@ export default async function ManagerClubPage({
   );
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-[#080808]">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <Link
           href="/manager"
-          className="mb-8 inline-flex text-sm font-medium text-gray-600 hover:text-black"
+          className="mb-8 inline-flex text-sm font-medium text-[#A7A7A7] hover:text-[#F7F4EE]"
         >
           ← Retour aux clubs
         </Link>
 
-        <div className="mb-8 rounded-2xl border border-gray-200 bg-white p-7">
-          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-gray-500">
+        <div className="mb-8 rounded-2xl border border-white/10 bg-[#111111] p-7">
+          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-[#858585]">
             Club
           </p>
 
-          <h1 className="text-3xl font-bold text-gray-950">
+          <h1 className="text-3xl font-bold text-[#F7F4EE]">
             {club.name}
           </h1>
 
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-[#A7A7A7]">
             {club.city}
             {club.address
               ? ` · ${club.address}`
@@ -118,20 +118,20 @@ export default async function ManagerClubPage({
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-          <section className="rounded-2xl border border-gray-200 bg-white p-7">
+          <section className="rounded-2xl border border-white/10 bg-[#111111] p-7">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-950">
+              <h2 className="text-xl font-bold text-[#F7F4EE]">
                 Administrateurs
               </h2>
 
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-[#858585]">
                 Comptes ayant accès à ce club.
               </p>
             </div>
 
             {memberships.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-gray-300 p-6 text-center">
-                <p className="text-sm text-gray-500">
+              <div className="rounded-xl border border-dashed border-white/15 p-6 text-center">
+                <p className="text-sm text-[#858585]">
                   Aucun administrateur pour le moment.
                 </p>
               </div>
@@ -154,15 +154,15 @@ export default async function ManagerClubPage({
                     return (
                       <div
                         key={membership.id}
-                        className="flex flex-col justify-between gap-4 rounded-xl border border-gray-200 p-5 sm:flex-row sm:items-center"
+                        className="flex flex-col justify-between gap-4 rounded-xl border border-white/10 p-5 sm:flex-row sm:items-center"
                       >
                         <div>
-                          <p className="font-semibold text-gray-950">
+                          <p className="font-semibold text-[#F7F4EE]">
                             {fullName ||
                               "Administrateur"}
                           </p>
 
-                          <p className="mt-1 text-sm text-gray-500">
+                          <p className="mt-1 text-sm text-[#858585]">
                             {membership.role ===
                             "scanner"
                               ? "Scanner"
@@ -175,7 +175,7 @@ export default async function ManagerClubPage({
                             membership.status ===
                             "active"
                               ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-600"
+                              : "bg-white/[0.07] text-[#A7A7A7]"
                           }`}
                         >
                           {membership.status ===
@@ -191,13 +191,13 @@ export default async function ManagerClubPage({
             )}
           </section>
 
-          <section className="rounded-2xl border border-gray-200 bg-white p-7">
+          <section className="rounded-2xl border border-white/10 bg-[#111111] p-7">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-950">
+              <h2 className="text-xl font-bold text-[#F7F4EE]">
                 Ajouter un administrateur
               </h2>
 
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-[#858585]">
                 Un email d&apos;invitation lui sera
                 envoyé.
               </p>

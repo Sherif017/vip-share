@@ -220,12 +220,12 @@ export default async function ReservationsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="kre-customer min-h-screen bg-black text-white">
       <div className="mx-auto max-w-6xl px-6 py-12">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
-              VIP Share
+              K-RÉ
             </p>
 
             <h1 className="mt-3 text-4xl font-bold">
@@ -259,7 +259,7 @@ export default async function ReservationsPage() {
 
             <Link
               href="/events"
-              className="mt-7 inline-block rounded-full bg-white px-6 py-3 font-semibold text-black transition hover:bg-zinc-200"
+                            className="kre-primary-cta mt-7 inline-block rounded-full px-6 py-3 font-semibold transition"
             >
               Découvrir les soirées
             </Link>
@@ -359,7 +359,7 @@ export default async function ReservationsPage() {
                           {offer
                             ?.table_number && (
                             <span className="rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-400">
-                              Table n°
+                              K-RÉ
                               {
                                 offer.table_number
                               }
@@ -518,7 +518,7 @@ export default async function ReservationsPage() {
                         {isPassAccessible(reservation.status) && (
                           <Link
                             href={`/confirmation/${reservation.reservation_code}`}
-                            className="rounded-full bg-white px-6 py-3 text-center text-sm font-semibold text-black transition hover:bg-zinc-200"
+                            className="kre-primary-cta rounded-full px-6 py-3 text-center text-sm font-semibold transition"
                           >
                             Voir mon pass VIP
                           </Link>

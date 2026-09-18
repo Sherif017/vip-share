@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
+import KreLogo from "@/components/KreLogo";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -59,11 +60,11 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
+    <main className="kre-customer min-h-screen bg-black text-white flex items-center justify-center px-6">
       <div className="w-full max-w-md">
-        <p className="text-sm uppercase tracking-[0.3em] text-zinc-500 mb-3">
-          VIP Share
-        </p>
+        <Link href="/" aria-label="K-RÉ — Accueil" className="mb-5 inline-block">
+          <KreLogo variant="auth" />
+        </Link>
 
         <h1 className="text-4xl font-bold mb-3">
           Créer un compte
@@ -157,7 +158,7 @@ export default function RegisterPage() {
 
           <button
             disabled={loading}
-            className="w-full rounded-2xl bg-white text-black py-4 font-semibold disabled:opacity-50"
+            className="kre-primary-cta w-full rounded-2xl py-4 font-semibold transition"
           >
             {loading
               ? "Création..."

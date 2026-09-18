@@ -10,6 +10,7 @@ import Link from "next/link";
 import {
   createClient,
 } from "@/lib/supabase/client";
+import KreLogo from "@/components/KreLogo";
 
 export default function ForgotPasswordPage() {
   const supabase =
@@ -66,16 +67,17 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
+    <main className="kre-customer min-h-screen bg-black text-white flex items-center justify-center px-6">
       <div className="w-full max-w-md">
 
         <div className="mb-8">
 
           <Link
             href="/"
-            className="inline-block text-sm uppercase tracking-[0.3em] text-zinc-500 hover:text-white transition mb-6"
+            aria-label="K-RÉ — Accueil"
+            className="mb-6 inline-block"
           >
-            VIP Share
+            <KreLogo variant="auth" />
           </Link>
 
           <h1 className="text-4xl font-bold mb-3">
@@ -145,7 +147,7 @@ export default function ForgotPasswordPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-2xl bg-white text-black py-4 font-semibold hover:bg-zinc-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="kre-primary-cta w-full rounded-2xl py-4 font-semibold transition"
           >
             {loading
               ? "Envoi..."

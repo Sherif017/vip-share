@@ -1,170 +1,107 @@
 import Link from "next/link";
 
 import { getAdminAccess } from "@/lib/admin-access";
-
 import LogoutButton from "@/components/LogoutButton";
+import BottomNavigation from "@/components/ui/BottomNavigation";
+import KreLogo from "@/components/KreLogo";
 
 export default async function Header() {
   const access = await getAdminAccess();
   const user = access !== null;
-
   const isManager = access?.isManager ?? false;
-  const isClubAdmin =
-    isManager || (access?.managedClubIds.length ?? 0) > 0;
+  const isClubAdmin = isManager || (access?.managedClubIds.length ?? 0) > 0;
   const canScan = access?.canScanAnyClub ?? false;
 
   return (
-    <header className="border-b border-gray-200 bg-white">
-      <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-6 px-4 py-3 sm:px-6 lg:px-8">
-        {/* ====================================================
-            LOGO
-        ==================================================== */}
+    <>
+      <header className="border-b border-white/[0.07] bg-ink">
+        <div className="mx-auto flex min-h-[4.5rem] max-w-7xl items-center justify-between gap-6 px-5 sm:px-8 lg:px-10">
 
-        <Link
-          href="/"
-          className="shrink-0 text-xl font-black tracking-tight text-black"
-        >
-          VIP Share
-        </Link>
-
-        {/* ====================================================
-            NAVIGATION DESKTOP
-        ==================================================== */}
-
-        <nav className="hidden items-center gap-6 md:flex">
           <Link
-            href="/events"
-            className="text-sm font-medium text-gray-700 transition hover:text-black"
+            href="/"
+            aria-label="K-RÉ — Accueil"
+            className="group shrink-0"
           >
-            Soirées
+            <KreLogo variant="header" />
           </Link>
 
-          {user && (
+          <nav
+            aria-label="Navigation principale"
+            className="hidden items-center gap-7 md:flex"
+          >
             <Link
-              href="/reservations"
-              className="text-sm font-medium text-gray-700 transition hover:text-black"
+              href="/events"
+              className="text-sm text-muted transition hover:text-cream"
             >
-              Mes réservations
+              Explorer
             </Link>
-          )}
 
-          {/* --------------------------------------------------
-              ADMIN CLUB
-          -------------------------------------------------- */}
+            {user && (
+              <Link
+                href="/reservations"
+                className="text-sm text-muted transition hover:text-cream"
+              >
+                Réservations
+              </Link>
+            )}
 
-          {user && isClubAdmin && (
-            <Link
-              href="/admin"
-              className="text-sm font-medium text-gray-700 transition hover:text-black"
-            >
-              Admin
-            </Link>
-          )}
+            {user && isClubAdmin && (
+              <Link
+                href="/admin"
+                className="text-sm text-muted transition hover:text-cream"
+              >
+                Admin
+              </Link>
+            )}
 
-          {/* --------------------------------------------------
-              SCANNER
-          -------------------------------------------------- */}
+            {user && canScan && (
+              <Link
+                href="/admin/scan"
+                className="text-sm text-muted transition hover:text-cream"
+              >
+                Scanner
+              </Link>
+            )}
 
-          {user && canScan && (
-            <Link
-              href="/admin/scan"
-              className="text-sm font-medium text-gray-700 transition hover:text-black"
-            >
-              Scanner
-            </Link>
-          )}
+            {user && isManager && (
+              <Link
+                href="/manager"
+                className="text-sm text-muted transition hover:text-cream"
+              >
+                Manager
+              </Link>
+            )}
+          </nav>
 
-          {/* --------------------------------------------------
-              MANAGER VIP SHARE
-          -------------------------------------------------- */}
+          <div className="flex items-center gap-4">
 
-          {user && isManager && (
-            <Link
-              href="/manager"
-              className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
-            >
-              Manager
-            </Link>
-          )}
-        </nav>
+            <span className="hidden items-center gap-1.5 text-sm text-muted sm:inline-flex">
+              Paris
+              <span
+                aria-hidden="true"
+                className="text-xs text-champagne"
+              >
+                ⌄
+              </span>
+            </span>
 
-        {/* ====================================================
-            AUTH
-        ==================================================== */}
-
-        <div className="flex items-center gap-3">
-          {!user ? (
-            <>
+            {!user ? (
               <Link
                 href="/login"
-                className="text-sm font-medium text-gray-700 transition hover:text-black"
+                className="rounded-full border border-white/[0.14] px-4 py-2 text-sm font-medium text-cream transition hover:border-white/30"
               >
-                Connexion
+                Se connecter
               </Link>
+            ) : (
+              <LogoutButton />
+            )}
 
-              <Link
-                href="/register"
-                className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
-              >
-                Créer un compte
-              </Link>
-            </>
-          ) : (
-            <LogoutButton />
-          )}
+          </div>
+
         </div>
-      </div>
+      </header>
 
-      {/* ======================================================
-          NAVIGATION MOBILE
-      ====================================================== */}
-
-      <div className="border-t border-gray-100 md:hidden">
-        <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 sm:px-6">
-          <Link
-            href="/events"
-            className="whitespace-nowrap rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700"
-          >
-            Soirées
-          </Link>
-
-          {user && (
-            <Link
-              href="/reservations"
-              className="whitespace-nowrap rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700"
-            >
-              Mes réservations
-            </Link>
-          )}
-
-          {user && isClubAdmin && (
-            <Link
-              href="/admin"
-              className="whitespace-nowrap rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700"
-            >
-              Admin
-            </Link>
-          )}
-
-          {user && canScan && (
-            <Link
-              href="/admin/scan"
-              className="whitespace-nowrap rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700"
-            >
-              Scanner
-            </Link>
-          )}
-
-          {user && isManager && (
-            <Link
-              href="/manager"
-              className="whitespace-nowrap rounded-lg bg-black px-3 py-2 text-sm font-semibold text-white"
-            >
-              Manager
-            </Link>
-          )}
-        </div>
-      </div>
-    </header>
+      <BottomNavigation authenticated={user} />
+    </>
   );
 }

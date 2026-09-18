@@ -179,7 +179,7 @@ export default async function EditEventPage({
       <div className="mx-auto max-w-6xl px-6 py-12">
 
         <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
-          VIP Share · Admin
+          K-RÉ · Admin
         </p>
 
         <h1 className="mt-3 text-4xl font-bold">

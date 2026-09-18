@@ -139,7 +139,7 @@ export default function BookingClient({
   }
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="kre-customer min-h-screen bg-black text-white">
       <section className="mx-auto max-w-5xl px-6 py-14">
         <Link
           href={`/events/${slug}`}
@@ -155,14 +155,11 @@ export default function BookingClient({
             </p>
 
             <h1 className="mb-3 text-4xl font-bold md:text-5xl">
-              Choisis tes places
+              Choisis ta place
             </h1>
 
             <p className="mb-10 text-zinc-400">
-              Réserve une ou
-              plusieurs places sur
-              la table VIP
-              sélectionnée.
+              Réserve seulement les places dont tu as besoin.
             </p>
 
             <div className="mb-6 rounded-3xl border border-zinc-800 bg-zinc-950 p-7">
@@ -180,7 +177,7 @@ export default function BookingClient({
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <span className="rounded-full border border-zinc-700 px-4 py-2 text-sm">
-                  Table n°
+                  K-RÉ
                   {tableNumber}
                 </span>
 
@@ -379,7 +376,7 @@ export default function BookingClient({
                   href={`/checkout/${slug}?table=${encodeURIComponent(
                     vipOfferId
                   )}&quantity=${quantity}`}
-                  className="mt-8 block w-full rounded-2xl bg-white py-4 text-center font-semibold text-black transition hover:bg-zinc-200"
+                  className="kre-primary-cta mt-8 block w-full rounded-2xl py-4 text-center font-semibold transition"
                 >
                   Continuer ·{" "}
                   {formatMoney(
@@ -391,7 +388,7 @@ export default function BookingClient({
                 <button
                   type="button"
                   disabled
-                  className="mt-8 block w-full cursor-not-allowed rounded-2xl bg-zinc-800 py-4 text-center font-semibold text-zinc-500"
+                  className="kre-primary-cta mt-8 block w-full cursor-not-allowed rounded-2xl py-4 text-center font-semibold"
                 >
                   {deadlinePassed
                     ? "Réservations terminées"

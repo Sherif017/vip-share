@@ -149,7 +149,7 @@ export default function ReservationDecisionActions({
         </p>
 
         <p className="mt-2 text-sm text-red-300/70">
-          Contacte VIP Share pour connaître la suite de ta réservation.
+          Contacte K-RÉ pour connaître la suite de ta réservation.
         </p>
 
       </div>
@@ -219,7 +219,7 @@ export default function ReservationDecisionActions({
           className={`rounded-2xl px-5 py-4 text-sm font-semibold transition disabled:opacity-50 ${
             currentChoice ===
             "maintain"
-              ? "bg-white text-black"
+              ? "kre-primary-cta"
               : "border border-zinc-700 text-white hover:border-white"
           }`}
         >
