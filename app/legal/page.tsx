@@ -23,11 +23,15 @@ export default function LegalPage() {
 
             <div className="mt-3 space-y-1">
               <p>TAVYX</p>
-              <p>[TODO : forme juridique à compléter]</p>
-              <p>[TODO : adresse du siège social à compléter]</p>
-              <p>[TODO : numéro d&apos;immatriculation à compléter]</p>
-              <p>[TODO : numéro de TVA, si applicable]</p>
-              <p>Email : [TODO : adresse de contact TAVYX à compléter]</p>
+              <p>Société en cours de constitution.</p>
+              <p>
+                Les informations complètes d&apos;immatriculation
+                (forme juridique, siège social, numéro
+                d&apos;immatriculation, numéro de TVA le cas
+                échéant) seront publiées ici dès la finalisation
+                de la création de la société.
+              </p>
+              <p>Email : [TODO : adresse de contact à compléter]</p>
             </div>
           </section>
 
@@ -37,8 +41,8 @@ export default function LegalPage() {
             </h2>
 
             <p>
-              Le directeur de publication est
-              [TODO : directeur de publication TAVYX à compléter].
+              Le directeur de publication sera précisé à l&apos;issue
+              de la constitution officielle de la société TAVYX.
             </p>
           </section>
 
@@ -93,7 +97,7 @@ export default function LegalPage() {
             </p>
 
             <p className="mt-2 text-white">
-              [TODO : adresse de contact TAVYX à compléter]
+              [TODO : adresse de contact à compléter]
             </p>
           </section>
 

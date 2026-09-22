@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://vip-share-lipv.vercel.app"),
   title: "K-RÉ — Ta place en VIP.",
   description: "Trouve ta place en VIP dans les meilleures soirées.",
 };

@@ -27,7 +27,7 @@ export default async function Header() {
 
           <nav
             aria-label="Navigation principale"
-            className="hidden items-center gap-7 md:flex"
+            className="hidden items-center gap-7 lg:flex"
           >
             <Link
               href="/events"
@@ -75,7 +75,7 @@ export default async function Header() {
 
           <div className="flex items-center gap-4">
 
-            <span className="hidden items-center gap-1.5 text-sm text-muted sm:inline-flex">
+            <span className="hidden items-center gap-1.5 text-sm text-muted lg:inline-flex">
               Paris
               <span
                 aria-hidden="true"
@@ -101,7 +101,12 @@ export default async function Header() {
         </div>
       </header>
 
-      <BottomNavigation authenticated={user} />
+      <BottomNavigation
+        authenticated={user}
+        isClubAdmin={isClubAdmin}
+        canScan={canScan}
+        isManager={isManager}
+      />
     </>
   );
 }

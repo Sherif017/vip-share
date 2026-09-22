@@ -106,7 +106,7 @@ export default function ConfirmationClient({
     <main className="kre-customer min-h-screen bg-black text-white">
       <section className="mx-auto max-w-3xl px-6 py-14">
         <div className="mb-10 text-center">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#111111] text-3xl text-black">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#111111] text-3xl text-champagne">
             ✓
           </div>
 
@@ -125,24 +125,24 @@ export default function ConfirmationClient({
 
         {/* TABLE */}
 
-        <div className="mb-5 rounded-3xl border border-white/20 bg-[#111111] p-7 text-black">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-zinc-500">
+        <div className="mb-5 rounded-3xl border border-champagne/30 bg-[#111111] p-7">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-champagne">
             Ta table
           </p>
 
           <div className="mt-3 flex items-end justify-between gap-5">
             <div>
-              <p className="text-4xl font-bold md:text-5xl">
+              <p className="text-4xl font-bold text-cream md:text-5xl">
                 K-RÉ {tableNumber}
               </p>
 
-              <p className="mt-3 text-sm text-zinc-600">
+              <p className="mt-3 text-sm text-muted">
                 {tableParticipants} /{" "}
                 {tableCapacity} participants réservés
               </p>
             </div>
 
-            <span className="rounded-full bg-black px-4 py-2 text-xs font-semibold text-white">
+            <span className="rounded-full border border-champagne/50 bg-transparent px-4 py-2 text-xs font-semibold text-champagne-light">
               VIP
             </span>
           </div>

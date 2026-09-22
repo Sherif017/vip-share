@@ -681,14 +681,14 @@ export default function ScanClient() {
 
                 {/* État global de la table */}
 
-                <div className="mt-4 rounded-2xl border border-white/20 bg-[#111111] p-5 text-black">
+                <div className="mt-4 rounded-2xl border border-white/20 bg-[#111111] p-5 text-white">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
                         Table
                       </p>
 
-                      <p className="mt-2 text-3xl font-bold">
+                      <p className="mt-2 text-3xl font-bold text-white">
                         N°{" "}
                         {
                           result
@@ -712,7 +712,7 @@ export default function ScanClient() {
                         Entrées table
                       </p>
 
-                      <p className="mt-1 text-3xl font-bold">
+                      <p className="mt-1 text-3xl font-bold text-white">
                         {
                           result
                             .reservation
@@ -732,9 +732,9 @@ export default function ScanClient() {
                     </div>
                   </div>
 
-                  <div className="mt-5 h-2 overflow-hidden rounded-full bg-zinc-200">
+                  <div className="mt-5 h-2 overflow-hidden rounded-full bg-zinc-800">
                     <div
-                      className="h-full rounded-full bg-black transition-all"
+                      className="h-full rounded-full bg-champagne transition-all"
                       style={{
                         width: `${Math.min(
                           100,
@@ -757,7 +757,7 @@ export default function ScanClient() {
                   </div>
 
                   <div className="mt-4 flex justify-between gap-4 text-sm">
-                    <span className="text-zinc-600">
+                    <span className="text-zinc-400">
                       {
                         result
                           .reservation
@@ -772,7 +772,7 @@ export default function ScanClient() {
                         : ""}
                     </span>
 
-                    <span className="font-semibold">
+                    <span className="font-semibold text-champagne-light">
                       {
                         result
                           .reservation

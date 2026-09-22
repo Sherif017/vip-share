@@ -188,7 +188,7 @@ export default function TermsPage() {
             </p>
 
             <p className="mt-2 text-white">
-              [TODO : adresse de contact TAVYX à compléter]
+              [TODO : adresse de contact à compléter]
             </p>
           </section>
 
