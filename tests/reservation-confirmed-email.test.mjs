@@ -142,6 +142,7 @@ function makeDb(state, clock) {
             id: 'email-row-1',
             reservation_id: args.p_reservation_id,
             email_type: args.p_email_type,
+            entity_id: args.p_entity_id ?? '',
             idempotency_key: args.p_idempotency_key,
             status: 'pending',
             attempts: 0,
@@ -215,7 +216,17 @@ function harness(options = {}) {
       EMAIL_FROM: 'K-RÉ <reservations@k-re.org>',
       EMAIL_REPLY_TO: 'support@k-re.org',
     },
+    // Cette suite couvre reservation_confirmed spécifiquement ; l'email
+    // table_confirmed (P1, déclenché par le même webhook) a sa propre
+    // suite dédiée. Stub no-op ici pour ne pas dupliquer sa couverture.
+    '@/lib/email/table-confirmed': { dispatchTableConfirmedEmails: async () => {} },
   };
+
+  // lib/email/dispatch.ts et lib/email/shared.ts sont du vrai code
+  // partagé (claim/send/mark) : on les charge réellement plutôt que de
+  // les mocker, pour continuer à tester l'orchestration effective.
+  dependencies['@/lib/email/shared'] = load('lib/email/shared.ts', dependencies, clock, logs);
+  dependencies['@/lib/email/dispatch'] = load('lib/email/dispatch.ts', dependencies, clock, logs);
 
   const emailModule = load('lib/email/reservation-confirmed.ts', dependencies, clock, logs);
   dependencies['@/lib/email/reservation-confirmed'] = emailModule;

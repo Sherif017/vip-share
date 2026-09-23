@@ -5,6 +5,7 @@ import {
   getAdminAccess,
 } from "@/lib/admin-access";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { dispatchSupplementRequiredEmails } from "@/lib/email/supplement";
 
 export async function POST(
   _request: Request,
@@ -58,6 +59,41 @@ export async function POST(
         },
         { status: 409 }
       );
+    }
+
+    // Une panne d'email ne doit jamais faire échouer cette décision
+    // admin, déjà validée et commitée par le RPC ci-dessus.
+    //
+    // roundKey = decision_started_at : le schéma actuel n'a pas de
+    // colonne "decision_id"/"snapshot_id" dédiée (vérifié dans la
+    // baseline et toutes les migrations start-supplement), donc pas
+    // d'identifiant plus robuste disponible sans toucher au modèle
+    // métier — ce qui n'est pas demandé. Entre les deux timestamps du
+    // round (decision_started_at, decision_expires_at), on préfère
+    // decision_started_at : fixé par now() côté SQL au moment du commit
+    // du round, alors que expires_at n'est qu'une valeur calculée côté
+    // Node puis simplement renvoyée en écho par le RPC. La RPC elle-même
+    // ne renvoie pas decision_started_at : on le relit juste après,
+    // lecture additionnelle, aucun changement du RPC.
+    if (data && typeof data === "object" && "offer_id" in data) {
+      try {
+        const { data: offerRow } = await supabaseAdmin
+          .from("vip_offers")
+          .select("decision_started_at")
+          .eq("id", id)
+          .maybeSingle();
+
+        const roundKey = offerRow?.decision_started_at
+          ? String(offerRow.decision_started_at)
+          : String(data.expires_at);
+
+        await dispatchSupplementRequiredEmails(id, roundKey);
+      } catch (emailError) {
+        console.error("start-supplement : envoi de l'email de décision impossible", {
+          offerId: id,
+          message: emailError instanceof Error ? emailError.message : "Erreur inconnue",
+        });
+      }
     }
 
     return NextResponse.json({

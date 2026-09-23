@@ -11,6 +11,7 @@
     "test:checkout-retry": "node --test tests/checkout-retry.test.mjs",
     "test:refund": "node --test tests/refund-route.test.mjs",
     "test:reservation-email": "node --test tests/reservation-confirmed-email.test.mjs",
+    "test:reservation-email-p1": "node --test tests/reservation-emails-p1.test.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

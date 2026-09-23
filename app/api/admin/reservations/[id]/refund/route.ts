@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { canManageVipOffer, getAdminAccess } from "@/lib/admin-access";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { dispatchRefundRequestedEmail, dispatchRefundCompletedEmail } from "@/lib/email/refund";
 
 type RefundRow = {
-  id: string; payment_type: "initial_deposit" | "supplement";
-  stripe_session_id: string; status: "refund_pending" | "refunding" | "refunded";
+  id: string; reservation_id: string; payment_type: "initial_deposit" | "supplement";
+  stripe_session_id: string; status: "refund_pending" | "refunding" | "refunded"; amount: number | null;
 };
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -38,6 +39,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (claim.error) return NextResponse.json({ error: claim.error.message }, { status: 409 });
     const claimed = claim.data as RefundRow;
     if (claimed.status === "refunded") { results.push(claimed); continue; }
+
+    // Une panne d'email ne doit jamais interrompre le traitement du
+    // remboursement, déjà accepté (claimed) par le RPC ci-dessus.
+    try {
+      await dispatchRefundRequestedEmail(claimed);
+    } catch (emailError) {
+      console.error("refund : envoi de l'email 'demandé' impossible", {
+        refundId: row.id,
+        message: emailError instanceof Error ? emailError.message : "Erreur inconnue",
+      });
+    }
     try {
       const session = await stripe.checkout.sessions.retrieve(row.stripe_session_id, { expand: ["payment_intent"] });
       const expectedAmount = row.payment_type === "initial_deposit"
@@ -88,6 +100,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       }
       const completed = await supabaseAdmin.rpc("complete_vip_refund", { p_refund_id: row.id, p_stripe_refund_id: refund.id, p_payment_intent_id: intent, p_amount: expectedAmount, p_processed_by: access.userId });
       if (completed.error) throw completed.error;
+
+      // Idem : le remboursement Stripe et sa persistance DB sont déjà
+      // terminés et commités à ce stade, indépendamment de l'email.
+      try {
+        await dispatchRefundCompletedEmail(completed.data as RefundRow);
+      } catch (emailError) {
+        console.error("refund : envoi de l'email 'terminé' impossible", {
+          refundId: row.id,
+          message: emailError instanceof Error ? emailError.message : "Erreur inconnue",
+        });
+      }
+
       results.push(completed.data);
     } catch (error) {
       await supabaseAdmin.rpc("fail_vip_refund", { p_refund_id: row.id, p_error: error instanceof Error ? error.message : "Erreur Stripe" });

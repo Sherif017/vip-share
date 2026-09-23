@@ -8,6 +8,7 @@ import {
 import {
   supabaseAdmin,
 } from "@/lib/supabase-admin";
+import { dispatchTableConfirmedEmails } from "@/lib/email/table-confirmed";
 
 export async function POST(
   _request: Request,
@@ -286,6 +287,23 @@ export async function POST(
       console.error(
         "Erreur relecture table accept-as-is :",
         updatedOfferError
+      );
+    }
+
+    // Une panne d'email ne doit jamais faire échouer cette décision
+    // admin, déjà validée et commitée par le RPC ci-dessus.
+    try {
+      await dispatchTableConfirmedEmails(offer.id);
+    } catch (emailError) {
+      console.error(
+        "accept-as-is : envoi de l'email table confirmée impossible",
+        {
+          offerId: offer.id,
+          message:
+            emailError instanceof Error
+              ? emailError.message
+              : "Erreur inconnue",
+        }
       );
     }
 

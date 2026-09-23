@@ -5,6 +5,7 @@ import {
   getAdminAccess,
 } from "@/lib/admin-access";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { dispatchMergeProposedEmails } from "@/lib/email/merge";
 
 export async function POST(
   request: Request,
@@ -101,6 +102,17 @@ export async function POST(
         },
         { status: error.code === "42501" ? 403 : error.code === "P0001" ? 409 : error.code === "22023" ? 400 : 500 }
       );
+    }
+
+    // Une panne d'email ne doit jamais faire échouer cette proposition
+    // de fusion, déjà validée et commitée par le RPC ci-dessus.
+    try {
+      await dispatchMergeProposedEmails(id);
+    } catch (emailError) {
+      console.error("propose-merge : envoi de l'email de proposition impossible", {
+        sourceOfferId: id,
+        message: emailError instanceof Error ? emailError.message : "Erreur inconnue",
+      });
     }
 
     return NextResponse.json({

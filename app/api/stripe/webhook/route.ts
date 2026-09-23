@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { dispatchReservationConfirmedEmail } from "@/lib/email/reservation-confirmed";
+import { dispatchTableConfirmedEmails } from "@/lib/email/table-confirmed";
 
 async function confirmInitialReservation(
   session: Stripe.Checkout.Session
@@ -83,6 +84,29 @@ async function confirmInitialReservation(
     } catch (emailError) {
       console.error(
         "Webhook Deposit : envoi de l'email de confirmation impossible",
+        {
+          reservationId,
+          message:
+            emailError instanceof Error
+              ? emailError.message
+              : "Erreur inconnue",
+        }
+      );
+    }
+
+    /*
+     * La confirmation de CETTE réservation peut être celle qui fait
+     * franchir le seuil à la table (trigger SQL transparent, à
+     * l'intérieur du même appel RPC), ou la table peut déjà être
+     * confirmed si cette réservation rejoint une table qui l'était
+     * déjà. Le claim atomique par réservation rend cet appel sûr à
+     * exécuter à chaque passage, sans jamais dupliquer l'email A.
+     */
+    try {
+      await dispatchTableConfirmedEmails(reservation.vip_offer_id);
+    } catch (emailError) {
+      console.error(
+        "Webhook Deposit : envoi de l'email table confirmée impossible",
         {
           reservationId,
           message:

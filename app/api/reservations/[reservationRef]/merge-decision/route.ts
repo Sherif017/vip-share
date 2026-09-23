@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { dispatchMergeFinalizedEmails } from "@/lib/email/merge";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -50,6 +51,22 @@ export async function POST(
     }
     const result = Array.isArray(data) ? data[0] : data;
     if (!result || typeof result.success !== "boolean") throw new Error("Réponse RPC invalide");
+
+    // Une panne d'email ne doit jamais faire échouer cette décision
+    // client, déjà validée et commitée par le RPC ci-dessus.
+    // dispatchMergeFinalizedEmails gère aussi en interne la table cible
+    // (elle peut franchir le seuil de confirmation via cette fusion).
+    if (result.status === "completed") {
+      try {
+        await dispatchMergeFinalizedEmails(id);
+      } catch (emailError) {
+        console.error("merge-decision : envoi de l'email de fusion finalisée impossible", {
+          sourceOfferId: id,
+          message: emailError instanceof Error ? emailError.message : "Erreur inconnue",
+        });
+      }
+    }
+
     return NextResponse.json(result, { status: result.success ? 200 : 409 });
   } catch (error) {
     console.error("merge-decision:", error);

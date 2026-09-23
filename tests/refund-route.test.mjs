@@ -23,6 +23,7 @@ function loadRoute(harness) {
       if (name === "@/lib/stripe") return { stripe: harness.stripe };
       if (name === "@/lib/admin-access") return { getAdminAccess: harness.getAdminAccess, canManageVipOffer: harness.canManageVipOffer };
       if (name === "@/lib/supabase-admin") return { supabaseAdmin: harness.db };
+      if (name === "@/lib/email/refund") return { dispatchRefundRequestedEmail: async () => {}, dispatchRefundCompletedEmail: async () => {} };
       throw new Error(`Unexpected dependency ${name}`);
     },
     Response,
