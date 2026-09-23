@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 
-export default function LogoutButton() {
+type LogoutButtonProps = {
+  variant?: "pill" | "menu";
+  className?: string;
+};
+
+export default function LogoutButton({
+  variant = "pill",
+  className = "",
+}: LogoutButtonProps) {
   const router = useRouter();
 
   const [loading, setLoading] =
@@ -33,12 +41,17 @@ export default function LogoutButton() {
     router.refresh();
   }
 
+  const baseClassName =
+    variant === "menu"
+      ? "w-full text-left text-base text-muted transition hover:text-champagne disabled:cursor-not-allowed disabled:opacity-50"
+      : "rounded-full border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-white hover:text-white disabled:cursor-not-allowed disabled:opacity-50";
+
   return (
     <button
       type="button"
       onClick={handleLogout}
       disabled={loading}
-      className="rounded-full border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-white hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+      className={`${baseClassName} ${className}`.trim()}
     >
       {loading
         ? "Déconnexion..."

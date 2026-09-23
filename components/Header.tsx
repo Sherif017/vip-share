@@ -1,8 +1,7 @@
 import Link from "next/link";
 
 import { getAdminAccess } from "@/lib/admin-access";
-import LogoutButton from "@/components/LogoutButton";
-import BottomNavigation from "@/components/ui/BottomNavigation";
+import MobileMenu from "@/components/ui/MobileMenu";
 import KreLogo from "@/components/KreLogo";
 
 export default async function Header() {
@@ -17,61 +16,19 @@ export default async function Header() {
       <header className="border-b border-white/[0.07] bg-ink">
         <div className="mx-auto flex min-h-[4.5rem] max-w-7xl items-center justify-between gap-6 px-5 sm:px-8 lg:px-10">
 
-          <Link
-            href="/"
-            aria-label="K-RÉ — Accueil"
-            className="group shrink-0"
-          >
-            <KreLogo variant="header" />
-          </Link>
-
-          <nav
-            aria-label="Navigation principale"
-            className="hidden items-center gap-7 lg:flex"
-          >
+          <div className="flex min-w-0 shrink items-center gap-2 sm:gap-3">
             <Link
-              href="/events"
-              className="text-sm text-muted transition hover:text-cream"
+              href="/"
+              aria-label="K-RÉ — Accueil"
+              className="group shrink-0"
             >
-              Explorer
+              <KreLogo variant="header" />
             </Link>
 
-            {user && (
-              <Link
-                href="/reservations"
-                className="text-sm text-muted transition hover:text-cream"
-              >
-                Réservations
-              </Link>
-            )}
-
-            {user && isClubAdmin && (
-              <Link
-                href="/admin"
-                className="text-sm text-muted transition hover:text-cream"
-              >
-                Admin
-              </Link>
-            )}
-
-            {user && canScan && (
-              <Link
-                href="/admin/scan"
-                className="text-sm text-muted transition hover:text-cream"
-              >
-                Scanner
-              </Link>
-            )}
-
-            {user && isManager && (
-              <Link
-                href="/manager"
-                className="text-sm text-muted transition hover:text-cream"
-              >
-                Manager
-              </Link>
-            )}
-          </nav>
+            <span className="hidden min-[360px]:inline-flex whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.18em] text-champagne sm:text-[11px] sm:tracking-[0.22em]">
+              Ta place en VIP.
+            </span>
+          </div>
 
           <div className="flex items-center gap-4">
 
@@ -85,28 +42,26 @@ export default async function Header() {
               </span>
             </span>
 
-            {!user ? (
+            {!user && (
               <Link
                 href="/login"
                 className="rounded-full border border-white/[0.14] px-4 py-2 text-sm font-medium text-cream transition hover:border-white/30"
               >
                 Se connecter
               </Link>
-            ) : (
-              <LogoutButton />
             )}
+
+            <MobileMenu
+              authenticated={user}
+              isClubAdmin={isClubAdmin}
+              canScan={canScan}
+              isManager={isManager}
+            />
 
           </div>
 
         </div>
       </header>
-
-      <BottomNavigation
-        authenticated={user}
-        isClubAdmin={isClubAdmin}
-        canScan={canScan}
-        isManager={isManager}
-      />
     </>
   );
 }
