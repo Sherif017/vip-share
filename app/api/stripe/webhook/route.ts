@@ -3,6 +3,7 @@ import Stripe from "stripe";
 
 import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { dispatchReservationConfirmedEmail } from "@/lib/email/reservation-confirmed";
 
 async function confirmInitialReservation(
   session: Stripe.Checkout.Session
@@ -54,7 +55,7 @@ async function confirmInitialReservation(
     return;
   }
 
-  const { error } = await supabaseAdmin.rpc(
+  const { data: confirmResult, error } = await supabaseAdmin.rpc(
     "confirm_vip_reservation_payment",
     {
       p_reservation_id: reservationId,
@@ -66,6 +67,31 @@ async function confirmInitialReservation(
 
   if (error) {
     throw error;
+  }
+
+  /*
+   * L'email est envoyé APRÈS confirmation fiable du paiement, jamais
+   * avant, et n'affecte jamais cette fonction : une panne Resend ne doit
+   * jamais remettre en cause une réservation déjà confirmée par
+   * Stripe/Supabase. dispatchReservationConfirmedEmail ne lève jamais
+   * d'exception elle-même ; ce try/catch est une protection
+   * supplémentaire, volontairement redondante.
+   */
+  if (confirmResult?.status === "confirmed") {
+    try {
+      await dispatchReservationConfirmedEmail(reservationId);
+    } catch (emailError) {
+      console.error(
+        "Webhook Deposit : envoi de l'email de confirmation impossible",
+        {
+          reservationId,
+          message:
+            emailError instanceof Error
+              ? emailError.message
+              : "Erreur inconnue",
+        }
+      );
+    }
   }
 }
 

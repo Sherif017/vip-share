@@ -108,7 +108,7 @@ function harness() {
       },
     } },
   };
-  const dependencies = { 'next/server': { NextResponse: Response }, '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: user } } }) } }) }, '@/lib/supabase-admin': { supabaseAdmin: db }, '@/lib/stripe': { stripe } };
+  const dependencies = { 'next/server': { NextResponse: Response }, '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: user } } }) } }) }, '@/lib/supabase-admin': { supabaseAdmin: db }, '@/lib/stripe': { stripe }, '@/lib/email/reservation-confirmed': { dispatchReservationConfirmedEmail: async () => {} } };
   dependencies['@/lib/initial-checkout'] = load('lib/initial-checkout.ts', {}, clock);
   const route = load('app/api/reservations/route.ts', dependencies, clock);
   const webhook = load('app/api/stripe/webhook/route.ts', dependencies, clock);
