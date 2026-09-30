@@ -157,6 +157,13 @@ export async function PATCH(
         ) ?? ""
       );
 
+    const endTime =
+      String(
+        formData.get(
+          "endTime"
+        ) ?? ""
+      );
+
     const music =
       String(
         formData.get(
@@ -188,12 +195,32 @@ export async function PATCH(
       !name ||
       !slug ||
       !eventDate ||
-      !startTime
+      !startTime ||
+      !endTime
     ) {
       return NextResponse.json(
         {
           error:
             "Informations de soirée incomplètes.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      !/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(
+        startTime
+      ) ||
+      !/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(
+        endTime
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Les horaires de la soirée sont invalides.",
         },
         {
           status: 400,
@@ -890,6 +917,9 @@ export async function PATCH(
 
           start_time:
             startTime,
+
+          end_time:
+            endTime,
 
           music:
             music ||

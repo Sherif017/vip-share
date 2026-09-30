@@ -2,7 +2,7 @@ import Link from "next/link";
 import KreLogo from "@/components/KreLogo";
 
 export type ExplorerEvent = {
-  id: string; slug: string; name: string; event_date: string; start_time: string; music: string | null; image_url?: string | null;
+  id: string; slug: string; name: string; event_date: string; start_time: string; end_time: string; music: string | null; image_url?: string | null;
   clubs: { name: string; city: string } | { name: string; city: string }[] | null;
   vip_offers: { table_number?: string; capacity: number; price_per_person: number; spots_reserved: number }[] | null;
 };
@@ -19,7 +19,7 @@ export default function EventCard({ event, featured = false }: { event: Explorer
           {event.image_url ? <img src={event.image_url} alt="" loading={featured ? "eager" : "lazy"}/> : <div className="kr-photo-fallback"><KreLogo variant="fallback" /></div>}
           <div className="kr-event-shade"/>
         </div>
-        <div className="kr-event-top"><span>{featured ? "Ce soir" : date}</span><span>{event.start_time?.slice(0,5)}</span></div>
+        <div className="kr-event-top"><span>{featured ? "Ce soir" : date}</span><span>{event.start_time?.slice(0,5)}–{event.end_time?.slice(0,5)}</span></div>
         <div className="kr-event-content">
           <p className="eyebrow kr-event-date">{date} · {club.city}</p>
           <h2>{club.name}</h2>

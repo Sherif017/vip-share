@@ -1,3 +1,7 @@
+import {
+  eventHasStarted,
+  eventIsOver,
+} from "@/lib/event-time";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -23,6 +27,7 @@ type EventItem = {
   name: string;
   event_date: string;
   start_time: string;
+  end_time: string;
   music: string | null;
   image_url: string | null;
   table_map_url: string | null;
@@ -37,7 +42,7 @@ function money(value: number) {
 export default async function EventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { data, error } = await supabase.from("events").select(`
-    id, slug, name, event_date, start_time, music, image_url, table_map_url,
+    id, slug, name, event_date, start_time, end_time, music, image_url, table_map_url,
     clubs (name, city, address),
     vip_offers (id, table_number, total_table_price, capacity, confirmation_threshold, price_per_person, deposit_per_person, remaining_per_person, spots_reserved, booking_deadline, status)
   `).eq("slug", id).eq("status", "published").single();
@@ -48,6 +53,30 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   }
 
   const event = data as EventItem;
+
+  if (
+    eventIsOver({
+      eventDate:
+        event.event_date,
+      startTime:
+        event.start_time,
+      endTime:
+        event.end_time,
+    })
+  ) {
+    notFound();
+  }
+
+  const reservationsClosed =
+    eventHasStarted({
+      eventDate:
+        event.event_date,
+      startTime:
+        event.start_time,
+      endTime:
+        event.end_time,
+    });
+
   const club = Array.isArray(event.clubs) ? event.clubs[0] : event.clubs;
   const offers = [...(event.vip_offers ?? [])].sort((a, b) => a.table_number.localeCompare(b.table_number, "fr", { numeric: true }));
   if (!club || offers.length === 0) notFound();
@@ -68,7 +97,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
             ) : <div className="image-fallback h-full w-full" aria-hidden="true" />}
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8 lg:p-10">
-              <p className="eyebrow text-champagne-light">{date} · {event.start_time.slice(0, 5)}</p>
+              <p className="eyebrow text-champagne-light">{date} · {event.start_time.slice(0, 5)}–{event.end_time.slice(0, 5)}</p>
               <h1 id="event-title" className="mt-3 font-display text-4xl leading-none tracking-[-0.03em] text-cream sm:text-6xl">{club.name}</h1>
               <p className="mt-2 text-base text-white/75 sm:text-lg">{club.city.toUpperCase()} · {event.name}</p>
             </div>
@@ -78,7 +107,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         <section className="mt-5 flex flex-wrap gap-x-7 gap-y-3 border-b border-white/[0.08] pb-5 text-sm text-muted" aria-label="Détails de la soirée">
           {event.music && <InfoItem label="Musique" value={event.music} />}
           <InfoItem label="Date" value={date} />
-          <InfoItem label="Heure" value={event.start_time.slice(0, 5)} />
+          <InfoItem label="Horaires" value={`${event.start_time.slice(0, 5)}–${event.end_time.slice(0, 5)}`} />
           {club.address && <InfoItem label="Adresse" value={club.address} />}
         </section>
 
@@ -104,14 +133,17 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
               const remaining = Math.max(capacity - reserved, 0);
               const full = remaining === 0;
               const deadlinePassed = offer.booking_deadline ? new Date(offer.booking_deadline).getTime() <= now : false;
-              const available = !full && !deadlinePassed;
+              const available =
+                !full &&
+                !deadlinePassed &&
+                !reservationsClosed;
               const percentage = capacity > 0 ? Math.min((reserved / capacity) * 100, 100) : 0;
               return (
                 <article key={offer.id} className="rounded-[1.2rem] bg-surface p-4 ring-1 ring-inset ring-white/[0.07] transition hover:bg-[#151515] sm:p-5">
                   <div className="flex items-start justify-between gap-4"><div><p className="eyebrow">K-RÉ</p><h3 className="mt-1 font-display text-2xl text-cream">{offer.table_number}</h3></div><p className="text-right text-sm text-muted">{remaining}/{capacity}<br /><span className="text-xs">places libres</span></p></div>
                   <div className="mt-5 flex items-end justify-between gap-4"><div><p className="text-xs uppercase tracking-[0.14em] text-muted">Prix / personne</p><p className="mt-1 text-2xl font-semibold text-cream">{money(Number(offer.price_per_person))} €</p></div><p className="text-right text-xs text-muted">Deposit {money(Number(offer.deposit_per_person))} €<br />puis {money(Number(offer.remaining_per_person))} €</p></div>
                   <div className="mt-4 h-1 overflow-hidden rounded-full bg-[#111111]/[0.08]" aria-label={`${reserved} places réservées sur ${capacity}`}><div className="h-full rounded-full bg-champagne" style={{ width: `${percentage}%` }} /></div>
-                  {available ? <Link href={`/booking/${event.slug}?table=${offer.id}`} className="mt-5 flex min-h-11 items-center justify-center rounded-full bg-champagne px-5 text-sm font-semibold text-ink transition hover:bg-champagne-light">Réserver ma place <span className="ml-2" aria-hidden="true">→</span></Link> : <span className="mt-5 flex min-h-11 items-center justify-center rounded-full bg-[#111111]/[0.07] text-sm text-muted">{deadlinePassed ? "Réservations terminées" : "Complet"}</span>}
+                  {available ? <Link href={`/booking/${event.slug}?table=${offer.id}`} className="mt-5 flex min-h-11 items-center justify-center rounded-full bg-champagne px-5 text-sm font-semibold text-ink transition hover:bg-champagne-light">Réserver ma place <span className="ml-2" aria-hidden="true">→</span></Link> : <span className="mt-5 flex min-h-11 items-center justify-center rounded-full bg-[#111111]/[0.07] text-sm text-muted">{deadlinePassed || reservationsClosed ? "Réservations terminées" : "Complet"}</span>}
                 </article>
               );
             })}

@@ -264,6 +264,12 @@ export async function POST(
         "startTime"
       );
 
+    const endTime =
+      getString(
+        formData,
+        "endTime"
+      );
+
     const music =
       getString(
         formData,
@@ -300,12 +306,32 @@ export async function POST(
       !name ||
       !slug ||
       !eventDate ||
-      !startTime
+      !startTime ||
+      !endTime
     ) {
       return NextResponse.json(
         {
           error:
             "Les informations de la soirée sont incomplètes.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      !/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(
+        startTime
+      ) ||
+      !/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(
+        endTime
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Les horaires de la soirée sont invalides.",
         },
         {
           status: 400,
@@ -778,6 +804,9 @@ export async function POST(
 
           start_time:
             startTime,
+
+          end_time:
+            endTime,
 
           music:
             music || null,

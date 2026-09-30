@@ -42,6 +42,7 @@ type EventData = {
 
   event_date: string;
   start_time: string;
+  end_time: string;
 
   music: string | null;
 
@@ -116,6 +117,7 @@ export default async function EditEventPage({
         name,
         event_date,
         start_time,
+        end_time,
         music,
         image_url,
         table_map_url,
@@ -211,6 +213,12 @@ export default async function EditEventPage({
                   0,
                   5
                 ) ?? "",
+
+              endTime:
+                event.end_time?.slice(
+                  0,
+                  5
+                ) ?? "06:00",
 
               music:
                 event.music ??

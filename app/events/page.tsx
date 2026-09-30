@@ -1,5 +1,8 @@
+import {
+  eventIsOver,
+  parisDateOffset,
+} from "@/lib/event-time";
 import EventCard, { type ExplorerEvent } from "@/components/EventCard";
-import FilterChip from "@/components/ui/FilterChip";
 import PageContainer from "@/components/ui/PageContainer";
 import SectionHeader from "@/components/ui/SectionHeader";
 import { supabase } from "@/lib/supabase";
@@ -8,11 +11,12 @@ export default async function EventsPage() {
   const { data, error } = await supabase
     .from("events")
     .select(`
-      id, slug, name, event_date, start_time, music, image_url,
+      id, slug, name, event_date, start_time, end_time, music, image_url,
       clubs (name, city),
       vip_offers (capacity, price_per_person, spots_reserved)
     `)
     .eq("status", "published")
+    .gte("event_date", parisDateOffset(-1))
     .order("event_date", { ascending: true });
 
   if (error) {
@@ -24,7 +28,20 @@ export default async function EventsPage() {
     );
   }
 
-  const events = (data ?? []) as ExplorerEvent[];
+  const events =
+    (
+      (data ?? []) as ExplorerEvent[]
+    ).filter(
+      (event) =>
+        !eventIsOver({
+          eventDate:
+            event.event_date,
+          startTime:
+            event.start_time,
+          endTime:
+            event.end_time,
+        })
+    );
 
   return (
     <main className="bg-ink">
@@ -34,10 +51,6 @@ export default async function EventsPage() {
           <h1 id="events-title" className="mt-4 font-display text-4xl tracking-[-0.03em] text-cream sm:text-6xl">Trouve ta soirée.</h1>
           <p className="mt-5 text-base leading-7 text-muted sm:text-lg">Les meilleures tables VIP, une place à la fois.</p>
         </section>
-
-        <div className="mt-8 flex gap-2 overflow-x-auto pb-1" aria-label="Filtres d’exploration">
-          <FilterChip active>Tous</FilterChip><FilterChip>Clubs</FilterChip><FilterChip>Soirées</FilterChip><FilterChip>Tables VIP</FilterChip>
-        </div>
 
         <section className="mt-12" aria-labelledby="upcoming-title">
           <SectionHeader eyebrow={`${events.length} soirée${events.length > 1 ? "s" : ""}`} title="À l’affiche" />

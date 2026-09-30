@@ -36,6 +36,7 @@ type InitialValues = {
 
   eventDate: string;
   startTime: string;
+  endTime: string;
 
   music: string;
 
@@ -102,6 +103,13 @@ export default function EditEventForm({
     setStartTime,
   ] = useState(
     initialValues.startTime
+  );
+
+  const [
+    endTime,
+    setEndTime,
+  ] = useState(
+    initialValues.endTime
   );
 
   const [
@@ -526,6 +534,11 @@ export default function EditEventForm({
       );
 
       formData.append(
+        "endTime",
+        endTime
+      );
+
+      formData.append(
         "music",
         music
       );
@@ -682,13 +695,25 @@ export default function EditEventForm({
           />
 
           <Input
-            label="Heure"
+            label="Heure de début"
             type="time"
             value={
               startTime
             }
             onChange={
               setStartTime
+            }
+            required
+          />
+
+          <Input
+            label="Heure de fin"
+            type="time"
+            value={
+              endTime
+            }
+            onChange={
+              setEndTime
             }
             required
           />

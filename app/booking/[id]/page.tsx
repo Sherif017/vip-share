@@ -1,4 +1,7 @@
 import {
+  eventHasStarted,
+} from "@/lib/event-time";
+import {
   notFound,
 } from "next/navigation";
 
@@ -18,6 +21,7 @@ type EventItem = {
   name: string;
   event_date: string;
   start_time: string;
+  end_time: string;
 
   clubs:
     | Club
@@ -82,6 +86,7 @@ export default async function BookingPage({
         name,
         event_date,
         start_time,
+        end_time,
 
         clubs (
           name
@@ -111,6 +116,19 @@ export default async function BookingPage({
 
   const event =
     eventData as EventItem;
+
+  if (
+    eventHasStarted({
+      eventDate:
+        event.event_date,
+      startTime:
+        event.start_time,
+      endTime:
+        event.end_time,
+    })
+  ) {
+    notFound();
+  }
 
   const club =
     Array.isArray(

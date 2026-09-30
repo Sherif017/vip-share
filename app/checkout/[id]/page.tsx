@@ -1,4 +1,7 @@
 import {
+  eventHasStarted,
+} from "@/lib/event-time";
+import {
   notFound,
 } from "next/navigation";
 
@@ -19,6 +22,9 @@ type EventItem = {
   id: string;
   slug: string;
   name: string;
+  event_date: string;
+  start_time: string;
+  end_time: string;
 
   clubs:
     | Club
@@ -93,6 +99,9 @@ export default async function CheckoutPage({
         id,
         slug,
         name,
+        event_date,
+        start_time,
+        end_time,
 
         clubs (
           id,
@@ -123,6 +132,19 @@ export default async function CheckoutPage({
 
   const event =
     eventData as EventItem;
+
+  if (
+    eventHasStarted({
+      eventDate:
+        event.event_date,
+      startTime:
+        event.start_time,
+      endTime:
+        event.end_time,
+    })
+  ) {
+    notFound();
+  }
 
   const club =
     Array.isArray(

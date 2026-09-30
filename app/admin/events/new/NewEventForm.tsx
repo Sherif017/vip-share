@@ -81,6 +81,9 @@ export default function NewEventForm({
   const [startTime, setStartTime] =
     useState("23:30");
 
+  const [endTime, setEndTime] =
+    useState("05:00");
+
   const [music, setMusic] =
     useState("");
 
@@ -402,6 +405,11 @@ export default function NewEventForm({
       );
 
       formData.append(
+        "endTime",
+        endTime
+      );
+
+      formData.append(
         "music",
         music
       );
@@ -665,11 +673,21 @@ export default function NewEventForm({
           />
 
           <Input
-            label="Heure"
+            label="Heure de début"
             type="time"
             value={startTime}
             onChange={
               setStartTime
+            }
+            required
+          />
+
+          <Input
+            label="Heure de fin"
+            type="time"
+            value={endTime}
+            onChange={
+              setEndTime
             }
             required
           />
