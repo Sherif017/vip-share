@@ -71,9 +71,9 @@ export default async function NewEventPage() {
           <p className="mt-3 max-w-2xl text-zinc-400">
             Configure la soirée,
             importe ses visuels,
-            définis le Deposit et
-            ajoute les différentes
-            tables disponibles.
+            définis les tables VIP et
+            ouvre les réservations
+            en paiement intégral.
           </p>
 
           {!access.isManager && (

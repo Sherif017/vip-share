@@ -84,10 +84,13 @@ export default function NewEventForm({
   const [music, setMusic] =
     useState("");
 
-  const [
-    commissionPercentage,
-    setCommissionPercentage,
-  ] = useState(20);
+  /*
+   * Compatibilité interne avec l'ancien schéma :
+   * les nouvelles soirées K-RÉ sont désormais 100 % full payment.
+   * Cette valeur n'est plus configurable par le club.
+   */
+  const [commissionPercentage] =
+    useState(100);
 
   const [tables, setTables] =
     useState<VipTableDraft[]>([
@@ -720,34 +723,22 @@ export default function NewEventForm({
         </p>
       </section>
 
-      {/* COMMISSION */}
+      {/* PAIEMENT CLIENT */}
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 md:p-8">
+      <section className="rounded-3xl border border-emerald-900/40 bg-emerald-950/10 p-6 md:p-8">
         <h2 className="text-xl font-semibold">
-          Deposit
+          Paiement client
         </h2>
 
-        <p className="mt-2 max-w-2xl text-sm text-zinc-500">
-          Définis le pourcentage du prix
-qui sera payé en ligne sous forme
-de Deposit. Le reste sera réglé
-directement sur place.
+        <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+          Les nouvelles réservations K-RÉ sont réglées intégralement
+          en ligne. Le client paie le prix de ses places ainsi que les
+          frais de service K-RÉ au moment de la réservation.
         </p>
 
-        <div className="mt-6 max-w-xs">
-          <NumberInput
-            label="Deposit (%)"
-            value={
-              commissionPercentage
-            }
-            onChange={
-              setCommissionPercentage
-            }
-            min={1}
-            max={100}
-            step={0.1}
-          />
-        </div>
+        <p className="mt-4 text-sm font-semibold text-emerald-400">
+          100 % du prix VIP payé en ligne
+        </p>
       </section>
 
       {/* TABLES */}
@@ -784,17 +775,6 @@ directement sur place.
                     table.capacity
                   : 0;
 
-              const commissionPerPerson =
-                pricePerPerson *
-                (commissionPercentage /
-                  100);
-
-              const remainingPerPerson =
-                Math.max(
-                  0,
-                  pricePerPerson -
-                    commissionPerPerson
-                );
 
               return (
                 <div
@@ -939,26 +919,17 @@ directement sur place.
                     </div>
                   </div>
 
-                  <div className="mt-6 grid gap-3 md:grid-cols-3">
+                  <div className="mt-6 grid gap-3 md:grid-cols-2">
                     <SummaryCard
-                      label="Prix / personne"
+                      label="Prix VIP / personne"
                       value={`${pricePerPerson.toFixed(
                         2
                       )} €`}
                     />
 
                     <SummaryCard
-                      label={`Deposit (${commissionPercentage} %)`}
-                      value={`${commissionPerPerson.toFixed(
-                        2
-                      )} €`}
-                    />
-
-                    <SummaryCard
-                      label="À payer sur place"
-                      value={`${remainingPerPerson.toFixed(
-                        2
-                      )} €`}
+                      label="Paiement"
+                      value="100 % en ligne"
                     />
                   </div>
                 </div>

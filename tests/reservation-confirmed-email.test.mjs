@@ -220,6 +220,9 @@ function harness(options = {}) {
     // table_confirmed (P1, déclenché par le même webhook) a sa propre
     // suite dédiée. Stub no-op ici pour ne pas dupliquer sa couverture.
     '@/lib/email/table-confirmed': { dispatchTableConfirmedEmails: async () => {} },
+    // Chantier 1 (Stripe Connect) : le webhook importe maintenant ce
+    // module pour account.updated, hors périmètre de cette suite P0.
+    '@/lib/stripe-connect': { applyStripeAccountSnapshot: async () => {} },
   };
 
   // lib/email/dispatch.ts et lib/email/shared.ts sont du vrai code

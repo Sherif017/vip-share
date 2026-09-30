@@ -4,6 +4,10 @@ import {
   SupplementCheckoutError,
   supplementCheckout,
 } from "@/lib/supplement-checkout";
+import {
+  FullPaymentSupplementError,
+  fullPaymentSupplementCheckout,
+} from "@/lib/full-payment-supplement";
 
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
@@ -45,14 +49,34 @@ export async function POST(
       );
     }
 
+    const {
+      data: paymentModelRow,
+      error: paymentModelError,
+    } = await supabaseAdmin
+      .from("reservations")
+      .select("payment_model")
+      .eq("id", reservationId)
+      .maybeSingle();
+
+    if (paymentModelError) {
+      throw paymentModelError;
+    }
+
     const checkoutUrl =
-      await supplementCheckout(
-        supabaseAdmin,
-        stripe,
-        reservationId,
-        user.id,
-        new URL(request.url).origin
-      );
+      paymentModelRow?.payment_model ===
+      "full_payment"
+        ? await fullPaymentSupplementCheckout(
+            reservationId,
+            user.id,
+            new URL(request.url).origin
+          )
+        : await supplementCheckout(
+            supabaseAdmin,
+            stripe,
+            reservationId,
+            user.id,
+            new URL(request.url).origin
+          );
 
     return NextResponse.json({
       success: true,
@@ -65,14 +89,18 @@ export async function POST(
 
         error:
           error instanceof
-          SupplementCheckoutError
+            SupplementCheckoutError ||
+          error instanceof
+            FullPaymentSupplementError
             ? error.message
             : "Paiement du supplément non résolu. Réessayez la même tentative.",
       },
       {
         status:
           error instanceof
-          SupplementCheckoutError
+            SupplementCheckoutError ||
+          error instanceof
+            FullPaymentSupplementError
             ? error.status
             : 503,
       }

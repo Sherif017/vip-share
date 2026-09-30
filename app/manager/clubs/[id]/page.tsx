@@ -5,6 +5,7 @@ import { getAdminAccess } from "@/lib/admin-access";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 import InviteClubAdminForm from "@/components/manager/InviteClubAdminForm";
+import ClubCommissionForm from "@/components/manager/ClubCommissionForm";
 
 type PageProps = {
   params: Promise<{
@@ -44,7 +45,7 @@ export default async function ManagerClubPage({
 
   const { data: club } = await supabaseAdmin
     .from("clubs")
-    .select("id, name, city, address, image_url")
+    .select("id, name, city, address, image_url, commission_bps, stripe_charges_enabled, stripe_onboarding_status")
     .eq("id", clubId)
     .maybeSingle();
 
@@ -118,7 +119,13 @@ export default async function ManagerClubPage({
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-          <section className="rounded-2xl border border-white/10 bg-[#111111] p-7">
+          <div className="space-y-8">
+            <ClubCommissionForm
+              clubId={clubId}
+              initialCommissionBps={club.commission_bps}
+            />
+
+            <section className="rounded-2xl border border-white/10 bg-[#111111] p-7">
             <div className="mb-6">
               <h2 className="text-xl font-bold text-[#F7F4EE]">
                 Administrateurs
@@ -189,7 +196,8 @@ export default async function ManagerClubPage({
                 )}
               </div>
             )}
-          </section>
+            </section>
+          </div>
 
           <section className="rounded-2xl border border-white/10 bg-[#111111] p-7">
             <div className="mb-6">

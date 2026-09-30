@@ -6,9 +6,12 @@ import {
   supabase,
 } from "@/lib/supabase";
 
+import { supabaseAdmin } from "@/lib/supabase-admin";
+
 import CheckoutClient from "./CheckoutClient";
 
 type Club = {
+  id: string;
   name: string;
 };
 
@@ -92,6 +95,7 @@ export default async function CheckoutPage({
         name,
 
         clubs (
+          id,
           name
         )
       `)
@@ -212,6 +216,53 @@ export default async function CheckoutPage({
       offer.remaining_per_person
     );
 
+  // ==========================================================
+  // Nouveau parcours K-RÉ :
+  // - aucune nouvelle réservation ne repasse par legacy_deposit ;
+  // - la disponibilité commerciale est déterminée côté serveur ;
+  // - commission et identifiants Stripe internes ne sont jamais
+  //   envoyés au navigateur.
+  //
+  // La RPC create_full_payment_reservation revérifie également
+  // ces conditions au moment de la réservation.
+  // ==========================================================
+
+  const { data: clubFinancialState, error: clubFinancialError } =
+    await supabaseAdmin
+      .from("clubs")
+      .select("stripe_account_id,stripe_charges_enabled,commission_bps")
+      .eq("id", club.id)
+      .single();
+
+  const clubReady =
+    !clubFinancialError &&
+    clubFinancialState?.stripe_charges_enabled === true &&
+    Boolean(clubFinancialState?.stripe_account_id) &&
+    clubFinancialState?.commission_bps != null;
+
+  const vipSubtotal = pricePerPerson * quantity;
+
+  const { data: feeConfig } = await supabaseAdmin
+    .from("platform_settings")
+    .select("service_fee_bps, service_fee_minimum_cents")
+    .single();
+
+  const serviceFeeBps = feeConfig?.service_fee_bps ?? 275;
+  const serviceFeeMinimumCents =
+    feeConfig?.service_fee_minimum_cents ?? 30;
+
+  const vipSubtotalCents = Math.round(vipSubtotal * 100);
+
+  const serviceFeeCents = Math.max(
+    Math.round((vipSubtotalCents * serviceFeeBps) / 10000),
+    serviceFeeMinimumCents
+  );
+
+  const serviceFee = serviceFeeCents / 100;
+
+  const fullPaymentTotal =
+    (vipSubtotalCents + serviceFeeCents) / 100;
+
   return (
     <CheckoutClient
       slug={
@@ -232,6 +283,8 @@ export default async function CheckoutPage({
       quantity={
         quantity
       }
+      paymentModel="full_payment"
+      salesEnabled={clubReady}
       totalPrice={
         pricePerPerson *
         quantity
@@ -244,6 +297,9 @@ export default async function CheckoutPage({
         remainingPerPerson *
         quantity
       }
+      vipSubtotal={vipSubtotal}
+      serviceFee={serviceFee}
+      fullPaymentTotal={fullPaymentTotal}
     />
   );
 }

@@ -111,12 +111,15 @@ export default function EditEventForm({
     initialValues.music
   );
 
-  const [
-    depositPercentage,
-    setDepositPercentage,
-  ] = useState(
-    initialValues.depositPercentage
-  );
+  /*
+   * Valeur historique conservée silencieusement pour les anciennes
+   * soirées. Elle n'est plus éditable : les nouvelles réservations
+   * passent par le modèle full_payment.
+   */
+  const [depositPercentage] =
+    useState(
+      initialValues.depositPercentage
+    );
 
   /*
   |--------------------------------------------------------------------------
@@ -706,33 +709,24 @@ export default function EditEventForm({
       </section>
 
       {/* ===================================================== */}
-      {/* DEPOSIT */}
+      {/* PAIEMENT */}
       {/* ===================================================== */}
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 md:p-8">
+      <section className="rounded-3xl border border-emerald-900/40 bg-emerald-950/10 p-6 md:p-8">
 
         <h2 className="text-xl font-semibold">
-          Deposit
+          Paiement client
         </h2>
 
-        <p className="mt-2 text-sm text-zinc-500">
-          Pourcentage payé en ligne par le client au moment de la réservation.
+        <p className="mt-2 text-sm text-zinc-400">
+          Les nouvelles réservations de cette soirée sont réglées
+          intégralement en ligne. Les anciennes réservations Deposit
+          restent conservées dans l&apos;historique et ne sont pas modifiées.
         </p>
 
-        <div className="mt-6 max-w-md">
-          <NumberInput
-            label="Deposit (%)"
-            value={
-              depositPercentage
-            }
-            onChange={
-              setDepositPercentage
-            }
-            min={0}
-            max={100}
-            step={0.1}
-          />
-        </div>
+        <p className="mt-4 text-sm font-semibold text-emerald-400">
+          100 % du prix VIP payé en ligne
+        </p>
 
       </section>
 
@@ -832,19 +826,6 @@ export default function EditEventForm({
                     table.capacity
                   : 0;
 
-              const depositPerPerson =
-                pricePerPerson *
-                (
-                  depositPercentage /
-                  100
-                );
-
-              const remainingPerPerson =
-                Math.max(
-                  0,
-                  pricePerPerson -
-                    depositPerPerson
-                );
 
               return (
                 <div
@@ -1002,28 +983,24 @@ export default function EditEventForm({
 
                   {/* Calculs */}
 
-                  <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 
                     <CalculatedValue
-                      label="Prix / personne"
+                      label="Prix VIP / personne"
                       value={
                         pricePerPerson
                       }
                     />
 
-                    <CalculatedValue
-                      label={`Deposit (${depositPercentage}%)`}
-                      value={
-                        depositPerPerson
-                      }
-                    />
+                    <div className="rounded-2xl border border-emerald-900/40 bg-emerald-950/10 p-5">
+                      <p className="text-sm text-zinc-500">
+                        Paiement
+                      </p>
 
-                    <CalculatedValue
-                      label="À payer sur place"
-                      value={
-                        remainingPerPerson
-                      }
-                    />
+                      <p className="mt-2 text-xl font-bold text-emerald-400">
+                        100 % en ligne
+                      </p>
+                    </div>
 
                     <div className="rounded-2xl border border-zinc-800 bg-black p-5">
                       <p className="text-sm text-zinc-500">

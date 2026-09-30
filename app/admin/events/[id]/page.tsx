@@ -44,6 +44,8 @@ type Reservation = {
 
   status: string;
 
+  payment_model: "legacy_deposit" | "full_payment" | string;
+
   reservation_code: string;
 
   checked_in_quantity: number;
@@ -62,8 +64,39 @@ type Reservation = {
 
 type RefundState = {
   reservation_id: string;
-  payment_type: "initial_deposit" | "supplement";
+  payment_type: string;
   status: "refund_pending" | "refunding" | "refunded";
+};
+
+type PaymentTransaction = {
+  id: string;
+  reservation_id: string;
+  event_id: string;
+  club_id: string;
+
+  payment_type: "initial" | "supplement" | string;
+  status: "pending" | "confirmed" | "expired" | "refunded" | string;
+
+  transfer_status:
+    | "not_ready"
+    | "ready"
+    | "processing"
+    | "transferred"
+    | "failed"
+    | "reversed"
+    | string;
+
+  vip_subtotal_cents: number;
+  service_fee_cents: number;
+  commission_cents: number;
+  club_net_cents: number;
+  total_customer_cents: number;
+
+  commission_rate_bps: number;
+  service_fee_rate_bps: number;
+
+  stripe_transfer_id: string | null;
+  stripe_transfer_reversal_id: string | null;
 };
 
 type VipOffer = {
@@ -292,6 +325,7 @@ export default async function AdminEventPage({
         deposit_paid,
         remaining_amount,
         status,
+        payment_model,
         reservation_code,
         checked_in_quantity,
         checked_in,
@@ -330,6 +364,90 @@ export default async function AdminEventPage({
       reservationsData ??
       []
     ) as Reservation[];
+
+  /*
+  |--------------------------------------------------------------------------
+  | Ledger financier paiement intégral
+  |--------------------------------------------------------------------------
+  |
+  | payment_transactions est la source de vérité pour les nouvelles
+  | réservations K-RÉ :
+  |
+  | - montant VIP payé
+  | - commission K-RÉ
+  | - net club
+  | - état du transfert Stripe Connect
+  |
+  | Les anciens champs deposit_paid / remaining_amount ne sont conservés
+  | que pour l'historique legacy.
+  |
+  */
+
+  const {
+    data: paymentTransactionsData,
+    error: paymentTransactionsError,
+  } =
+    await supabaseAdmin
+      .from("payment_transactions")
+      .select(`
+        id,
+        reservation_id,
+        event_id,
+        club_id,
+        payment_type,
+        status,
+        transfer_status,
+        vip_subtotal_cents,
+        service_fee_cents,
+        commission_cents,
+        club_net_cents,
+        total_customer_cents,
+        commission_rate_bps,
+        service_fee_rate_bps,
+        stripe_transfer_id,
+        stripe_transfer_reversal_id
+      `)
+      .eq(
+        "event_id",
+        id
+      );
+
+  if (paymentTransactionsError) {
+    console.error(
+      "Erreur récupération ledger financier :",
+      paymentTransactionsError
+    );
+  }
+
+  const paymentTransactions =
+    (
+      paymentTransactionsData ??
+      []
+    ) as PaymentTransaction[];
+
+  const confirmedPaymentTransactions =
+    paymentTransactions.filter(
+      (transaction) =>
+        transaction.status ===
+        "confirmed"
+    );
+
+  const transactionsByReservation =
+    new Map<string, PaymentTransaction[]>();
+
+  for (const transaction of paymentTransactions) {
+    const current =
+      transactionsByReservation.get(
+        transaction.reservation_id
+      ) ?? [];
+
+    current.push(transaction);
+
+    transactionsByReservation.set(
+      transaction.reservation_id,
+      current
+    );
+  }
 
   const refundStatesResult = reservations.length
     ? await supabaseAdmin
@@ -413,50 +531,136 @@ export default async function AdminEventPage({
       0
     );
 
-  const totalDeposits =
-    confirmedReservations.reduce(
-      (
-        total,
-        reservation
-      ) =>
+  /*
+  |--------------------------------------------------------------------------
+  | Finance — nouveau modèle full payment
+  |--------------------------------------------------------------------------
+  */
+
+  const fullPaymentVipCents =
+    confirmedPaymentTransactions.reduce(
+      (total, transaction) =>
         total +
         Number(
-          reservation
-            .deposit_paid ??
+          transaction.vip_subtotal_cents ??
             0
         ),
       0
     );
 
-  const totalRevenue =
-    confirmedReservations.reduce(
-      (
-        total,
-        reservation
-      ) =>
+  const fullPaymentCommissionCents =
+    confirmedPaymentTransactions.reduce(
+      (total, transaction) =>
         total +
         Number(
-          reservation
-            .total_price ??
+          transaction.commission_cents ??
             0
         ),
       0
     );
 
-  const totalRemaining =
-    confirmedReservations.reduce(
-      (
-        total,
-        reservation
-      ) =>
+  const fullPaymentClubNetCents =
+    confirmedPaymentTransactions.reduce(
+      (total, transaction) =>
         total +
         Number(
-          reservation
-            .remaining_amount ??
+          transaction.club_net_cents ??
             0
         ),
       0
     );
+
+  const transferredClubNetCents =
+    confirmedPaymentTransactions
+      .filter(
+        (transaction) =>
+          transaction.transfer_status ===
+          "transferred"
+      )
+      .reduce(
+        (total, transaction) =>
+          total +
+          Number(
+            transaction.club_net_cents ??
+              0
+          ),
+        0
+      );
+
+  const pendingClubNetCents =
+    confirmedPaymentTransactions
+      .filter(
+        (transaction) =>
+          ![
+            "transferred",
+            "reversed",
+          ].includes(
+            transaction.transfer_status
+          )
+      )
+      .reduce(
+        (total, transaction) =>
+          total +
+          Number(
+            transaction.club_net_cents ??
+              0
+          ),
+        0
+      );
+
+  /*
+  |--------------------------------------------------------------------------
+  | Compatibilité historique legacy
+  |--------------------------------------------------------------------------
+  */
+
+  const legacyConfirmedReservations =
+    confirmedReservations.filter(
+      (reservation) =>
+        reservation.payment_model !==
+        "full_payment"
+    );
+
+  const legacyDeposits =
+    legacyConfirmedReservations.reduce(
+      (total, reservation) =>
+        total +
+        Number(
+          reservation.deposit_paid ??
+            0
+        ),
+      0
+    );
+
+  const legacyRemaining =
+    legacyConfirmedReservations.reduce(
+      (total, reservation) =>
+        total +
+        Number(
+          reservation.remaining_amount ??
+            0
+        ),
+      0
+    );
+
+  const legacyRevenue =
+    legacyConfirmedReservations.reduce(
+      (total, reservation) =>
+        total +
+        Number(
+          reservation.total_price ??
+            0
+        ),
+      0
+    );
+
+  const totalOnlineVip =
+    fullPaymentVipCents / 100 +
+    legacyDeposits;
+
+  const totalVipValue =
+    fullPaymentVipCents / 100 +
+    legacyRevenue;
 
   const remainingSpots =
     Math.max(
@@ -666,19 +870,20 @@ export default async function AdminEventPage({
           />
 
           <StatCard
-            label="Deposits encaissés"
+            label="VIP payé en ligne"
             value={
               formatMoney(
-                totalDeposits
+                totalOnlineVip
               )
             }
           />
 
           <StatCard
-            label="CA réservé"
+            label="Net club"
             value={
               formatMoney(
-                totalRevenue
+                fullPaymentClubNetCents /
+                  100
               )
             }
           />
@@ -689,39 +894,82 @@ export default async function AdminEventPage({
         {/* SYNTHÈSE FINANCIÈRE */}
         {/* ===================================================== */}
 
-        <section className="mt-6 grid gap-4 lg:grid-cols-3">
+        <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
 
           <BigStat
-            label="Deposits encaissés"
+            label="VIP encaissé en ligne"
             value={
               formatMoney(
-                totalDeposits
+                totalOnlineVip
               )
             }
-            subtitle="Montant payé en ligne"
+            subtitle="Paiements VIP confirmés"
           />
 
           <BigStat
-            label="À payer sur place"
+            label="Commission K-RÉ"
             value={
               formatMoney(
-                totalRemaining
+                fullPaymentCommissionCents /
+                  100
               )
             }
-            subtitle="Montant restant à encaisser au club"
+            subtitle="Commission sur les paiements intégraux"
           />
 
           <BigStat
-            label="Valeur des réservations"
+            label="Net club"
             value={
               formatMoney(
-                totalRevenue
+                fullPaymentClubNetCents /
+                  100
               )
             }
-            subtitle="Deposit + paiement sur place"
+            subtitle="Montant club après commission"
+          />
+
+          <BigStat
+            label="Déjà transféré"
+            value={
+              formatMoney(
+                transferredClubNetCents /
+                  100
+              )
+            }
+            subtitle="Vers le compte Stripe Connect du club"
+          />
+
+          <BigStat
+            label="À recevoir"
+            value={
+              formatMoney(
+                pendingClubNetCents /
+                  100
+              )
+            }
+            subtitle="Net club encore sous contrôle K-RÉ"
           />
 
         </section>
+
+        {legacyConfirmedReservations.length > 0 && (
+          <section className="mt-4 rounded-2xl border border-amber-900/40 bg-amber-950/10 p-5">
+            <p className="text-sm font-semibold text-amber-300">
+              Historique ancien modèle
+            </p>
+
+            <p className="mt-2 text-sm leading-6 text-amber-100/70">
+              {legacyConfirmedReservations.length} réservation
+              {legacyConfirmedReservations.length !== 1 ? "s" : ""} historique
+              {legacyConfirmedReservations.length !== 1 ? "s" : ""} utilisent encore
+              l&apos;ancien fonctionnement acompte + règlement au club.
+              Montant restant historique à encaisser :{" "}
+              <strong>
+                {formatMoney(legacyRemaining)}
+              </strong>.
+            </p>
+          </section>
+        )}
 
         {/* ===================================================== */}
         {/* ÉTAT GLOBAL */}
@@ -932,50 +1180,104 @@ export default async function AdminEventPage({
                       0
                     );
 
-                  const tableDeposits =
-                    tableConfirmedReservations.reduce(
-                      (
-                        total,
-                        reservation
-                      ) =>
+                  const tableReservationIds =
+                    new Set(
+                      tableReservations.map(
+                        (reservation) =>
+                          reservation.id
+                      )
+                    );
+
+                  const tableConfirmedTransactions =
+                    confirmedPaymentTransactions.filter(
+                      (transaction) =>
+                        tableReservationIds.has(
+                          transaction.reservation_id
+                        )
+                    );
+
+                  const tableVipCents =
+                    tableConfirmedTransactions.reduce(
+                      (total, transaction) =>
                         total +
                         Number(
-                          reservation
-                            .deposit_paid ??
+                          transaction.vip_subtotal_cents ??
                             0
                         ),
                       0
                     );
 
-                  const tableRemainingAmount =
-                    tableConfirmedReservations.reduce(
-                      (
-                        total,
-                        reservation
-                      ) =>
+                  const tableCommissionCents =
+                    tableConfirmedTransactions.reduce(
+                      (total, transaction) =>
                         total +
                         Number(
-                          reservation
-                            .remaining_amount ??
+                          transaction.commission_cents ??
                             0
                         ),
                       0
                     );
 
-                  const tableRevenue =
-                    tableConfirmedReservations.reduce(
-                      (
-                        total,
-                        reservation
-                      ) =>
+                  const tableClubNetCents =
+                    tableConfirmedTransactions.reduce(
+                      (total, transaction) =>
                         total +
                         Number(
-                          reservation
-                            .total_price ??
+                          transaction.club_net_cents ??
                             0
                         ),
                       0
                     );
+
+                  const tableTransferredCents =
+                    tableConfirmedTransactions
+                      .filter(
+                        (transaction) =>
+                          transaction.transfer_status ===
+                          "transferred"
+                      )
+                      .reduce(
+                        (total, transaction) =>
+                          total +
+                          Number(
+                            transaction.club_net_cents ??
+                              0
+                          ),
+                        0
+                      );
+
+                  const tableLegacyReservations =
+                    tableConfirmedReservations.filter(
+                      (reservation) =>
+                        reservation.payment_model !==
+                        "full_payment"
+                    );
+
+                  const tableLegacyDeposits =
+                    tableLegacyReservations.reduce(
+                      (total, reservation) =>
+                        total +
+                        Number(
+                          reservation.deposit_paid ??
+                            0
+                        ),
+                      0
+                    );
+
+                  const tableLegacyRemaining =
+                    tableLegacyReservations.reduce(
+                      (total, reservation) =>
+                        total +
+                        Number(
+                          reservation.remaining_amount ??
+                            0
+                        ),
+                      0
+                    );
+
+                  const tableOnlineVip =
+                    tableVipCents / 100 +
+                    tableLegacyDeposits;
 
                   const tableCapacity =
                     Number(
@@ -1232,25 +1534,13 @@ export default async function AdminEventPage({
                           />
 
                           <TableInfo
-                            label="Deposit / personne"
-                            value={
-                              formatMoney(
-                                Number(
-                                  table.deposit_per_person
-                                )
-                              )
-                            }
+                            label="Paiement"
+                            value="100 % en ligne"
                           />
 
                           <TableInfo
-                            label="Sur place / personne"
-                            value={
-                              formatMoney(
-                                Number(
-                                  table.remaining_per_person
-                                )
-                              )
-                            }
+                            label="Frais client"
+                            value="Ajoutés au checkout K-RÉ"
                           />
 
                           <TableInfo
@@ -1281,36 +1571,55 @@ export default async function AdminEventPage({
 
                       <div className="border-b border-zinc-800 bg-black/30 p-6 md:p-8">
 
-                        <div className="grid gap-4 sm:grid-cols-3">
+                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
                           <FinanceCard
-                            label="Deposits encaissés"
+                            label="VIP payé en ligne"
                             value={
                               formatMoney(
-                                tableDeposits
+                                tableOnlineVip
                               )
                             }
                           />
 
                           <FinanceCard
-                            label="À payer sur place"
+                            label="Commission K-RÉ"
                             value={
                               formatMoney(
-                                tableRemainingAmount
+                                tableCommissionCents /
+                                  100
                               )
                             }
                           />
 
                           <FinanceCard
-                            label="CA réservé"
+                            label="Net club"
                             value={
                               formatMoney(
-                                tableRevenue
+                                tableClubNetCents /
+                                  100
+                              )
+                            }
+                          />
+
+                          <FinanceCard
+                            label="Déjà transféré"
+                            value={
+                              formatMoney(
+                                tableTransferredCents /
+                                  100
                               )
                             }
                           />
 
                         </div>
+
+                        {tableLegacyReservations.length > 0 && (
+                          <p className="mt-4 text-xs text-amber-300">
+                            Legacy : {formatMoney(tableLegacyRemaining)} reste
+                            historiquement à encaisser directement au club.
+                          </p>
+                        )}
                       </div>
 
                       {/* ========================================= */}
@@ -1388,15 +1697,15 @@ export default async function AdminEventPage({
                                     </th>
 
                                     <th className="px-5 py-4">
-                                      Deposit
+                                      VIP payé
                                     </th>
 
                                     <th className="px-5 py-4">
-                                      Sur place
+                                      Net club
                                     </th>
 
                                     <th className="px-5 py-4">
-                                      Total
+                                      Paiement
                                     </th>
 
                                     <th className="px-5 py-4">
@@ -1476,6 +1785,59 @@ export default async function AdminEventPage({
                                           refundStates.every(
                                             (state) => state.status === "refunded"
                                           ));
+
+                                      const reservationTransactions =
+                                        (
+                                          transactionsByReservation.get(
+                                            reservation.id
+                                          ) ?? []
+                                        ).filter(
+                                          (transaction) =>
+                                            transaction.status === "confirmed"
+                                        );
+
+                                      const isFullPayment =
+                                        reservation.payment_model ===
+                                        "full_payment";
+
+                                      const reservationVipPaid =
+                                        isFullPayment
+                                          ? reservationTransactions.reduce(
+                                              (total, transaction) =>
+                                                total +
+                                                Number(
+                                                  transaction.vip_subtotal_cents ??
+                                                    0
+                                                ),
+                                              0
+                                            ) / 100
+                                          : Number(
+                                              reservation.deposit_paid ??
+                                                0
+                                            );
+
+                                      const reservationClubNet =
+                                        isFullPayment
+                                          ? reservationTransactions.reduce(
+                                              (total, transaction) =>
+                                                total +
+                                                Number(
+                                                  transaction.club_net_cents ??
+                                                    0
+                                                ),
+                                              0
+                                            ) / 100
+                                          : Number(
+                                              reservation.total_price ??
+                                                0
+                                            );
+
+                                      const reservationTransferStatus =
+                                        isFullPayment
+                                          ? getReservationTransferLabel(
+                                              reservationTransactions
+                                            )
+                                          : "Legacy";
 
                                       return (
                                         <tr
@@ -1566,34 +1928,57 @@ export default async function AdminEventPage({
                                             </div>
                                           </td>
 
-                                          {/* Deposit */}
+                                          {/* VIP payé */}
 
                                           <td className="px-5 py-5">
-                                            {formatMoney(
-                                              Number(
-                                                reservation.deposit_paid
-                                              )
+                                            <p className="font-medium">
+                                              {formatMoney(
+                                                reservationVipPaid
+                                              )}
+                                            </p>
+
+                                            {!isFullPayment && (
+                                              <p className="mt-1 text-xs text-amber-400">
+                                                Acompte legacy
+                                              </p>
                                             )}
                                           </td>
 
-                                          {/* Sur place */}
+                                          {/* Net club */}
 
                                           <td className="px-5 py-5">
-                                            {formatMoney(
-                                              Number(
-                                                reservation.remaining_amount
-                                              )
+                                            <p className="font-medium">
+                                              {formatMoney(
+                                                reservationClubNet
+                                              )}
+                                            </p>
+
+                                            {!isFullPayment && (
+                                              <p className="mt-1 text-xs text-zinc-600">
+                                                Ancien modèle
+                                              </p>
                                             )}
                                           </td>
 
-                                          {/* Total */}
+                                          {/* Paiement */}
 
                                           <td className="px-5 py-5">
-                                            {formatMoney(
-                                              Number(
-                                                reservation.total_price
-                                              )
-                                            )}
+                                            <span
+                                              className={
+                                                isFullPayment
+                                                  ? "rounded-full bg-emerald-950/30 px-3 py-1 text-xs font-medium text-emerald-300"
+                                                  : "rounded-full bg-amber-950/30 px-3 py-1 text-xs font-medium text-amber-300"
+                                              }
+                                            >
+                                              {isFullPayment
+                                                ? reservationTransferStatus
+                                                : `Legacy · ${formatMoney(
+                                                    Number(
+                                                      reservation.remaining_amount ??
+                                                        0
+                                                    )
+                                                  )} sur place`}
+                                            </span>
                                           </td>
 
                                           {/* Statut */}
@@ -1714,6 +2099,58 @@ function formatMoney(
       maximumFractionDigits: 2,
     }
   ).format(value);
+}
+
+function getReservationTransferLabel(
+  transactions: PaymentTransaction[]
+) {
+  if (transactions.length === 0) {
+    return "Paiement intégral";
+  }
+
+  const statuses =
+    transactions.map(
+      (transaction) =>
+        transaction.transfer_status
+    );
+
+  if (
+    statuses.every(
+      (status) =>
+        status === "transferred"
+    )
+  ) {
+    return "Transféré au club";
+  }
+
+  if (
+    statuses.some(
+      (status) =>
+        status === "processing"
+    )
+  ) {
+    return "Transfert en cours";
+  }
+
+  if (
+    statuses.some(
+      (status) =>
+        status === "failed"
+    )
+  ) {
+    return "Transfert à reprendre";
+  }
+
+  if (
+    statuses.some(
+      (status) =>
+        status === "ready"
+    )
+  ) {
+    return "Prêt au transfert";
+  }
+
+  return "Payé en ligne";
 }
 
 function formatDeadline(

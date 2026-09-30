@@ -187,8 +187,8 @@ export default async function EditEventPage({
         </h1>
 
         <p className="mt-3 max-w-2xl text-zinc-400">
-          Modifie les informations de la soirée,
-          le Deposit et les différentes tables VIP.
+          Modifie les informations de la soirée
+          et les différentes tables VIP.
         </p>
 
         <div className="mt-10">

@@ -270,13 +270,7 @@ export async function POST(
         "music"
       );
 
-    const commissionPercentage =
-      Number(
-        getString(
-          formData,
-          "commissionPercentage"
-        )
-      );
+    const commissionPercentage = 100;
 
     const rawTables =
       getString(

@@ -11,7 +11,7 @@ const steps = [
   {
     number: "02",
     title: "Réserve tes places",
-    text: "Choisis le nombre de places dont tu as besoin et règle uniquement le Deposit demandé en ligne.",
+    text: "Choisis le nombre de places dont tu as besoin et règle ta réservation directement en ligne.",
   },
   {
     number: "03",
@@ -86,7 +86,7 @@ export default function HomePage() {
             <div className="kre-principle-copy max-w-2xl space-y-5 text-base leading-7 text-muted sm:text-lg sm:leading-8">
               <p>Une table VIP peut représenter un budget important. K-RÉ permet de réserver seulement le nombre de places dont tu as réellement besoin.</p>
               <p>Le prix de ta place est affiché avant la réservation.</p>
-              <p>Tu règles le Deposit en ligne, puis le montant restant est payé sur place selon les conditions de la réservation.</p>
+              <p>Tu règles l&apos;intégralité du prix de tes places en ligne au moment de la réservation. Les frais de service K-RÉ sont affichés avant le paiement.</p>
               <p className="kre-principle-promise"><span aria-hidden="true">✓</span> Tu connais toujours le prix avant de réserver.</p>
             </div>
           </div>

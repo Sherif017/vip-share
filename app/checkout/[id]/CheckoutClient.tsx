@@ -21,11 +21,21 @@ type CheckoutClientProps = {
 
   quantity: number;
 
+  paymentModel: "full_payment";
+
+  salesEnabled: boolean;
+
   totalPrice: number;
 
   totalDeposit: number;
 
   totalRemaining: number;
+
+  vipSubtotal: number;
+
+  serviceFee: number;
+
+  fullPaymentTotal: number;
 };
 
 function formatMoney(
@@ -57,12 +67,23 @@ export default function CheckoutClient({
 
   quantity,
 
+  paymentModel,
+
+  salesEnabled,
+
   totalPrice,
 
   totalDeposit,
 
   totalRemaining,
+
+  vipSubtotal,
+
+  serviceFee,
+
+  fullPaymentTotal,
 }: CheckoutClientProps) {
+  const isFullPayment = paymentModel === "full_payment";
   const [
     firstname,
     setFirstname,
@@ -124,7 +145,7 @@ export default function CheckoutClient({
 
       const response =
         await fetch(
-          "/api/reservations",
+          "/api/reservations/full-payment",
           {
             method: "POST",
 
@@ -324,11 +345,11 @@ export default function CheckoutClient({
                 }
                 className="kre-primary-cta mt-8 w-full rounded-2xl py-4 font-semibold transition"
               >
-                {loading
-                  ? "Redirection vers Stripe..."
-                  : `Payer le Deposit — ${formatMoney(
-                      totalDeposit
-                    )}€`}
+                {!salesEnabled
+                  ? "Réservations VIP bientôt disponibles"
+                  : loading
+                    ? "Redirection vers Stripe..."
+                    : `Payer — ${formatMoney(fullPaymentTotal)}€`}
               </button>
             </form>
           </div>
@@ -363,45 +384,72 @@ export default function CheckoutClient({
                   </span>
                 </div>
 
-                <div className="flex justify-between">
-                  <span className="text-zinc-400">
-                    Prix total
-                  </span>
+                {isFullPayment ? (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-400">
+                        {quantity} place{quantity > 1 ? "s" : ""} VIP
+                      </span>
+                      <span>{formatMoney(vipSubtotal)}€</span>
+                    </div>
 
-                  <span>
-                    {formatMoney(
-                      totalPrice
-                    )}
-                    €
-                  </span>
-                </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-400">
+                        Frais de service K-RÉ
+                      </span>
+                      <span>{formatMoney(serviceFee)}€</span>
+                    </div>
 
-                <div className="flex justify-between border-t border-zinc-800 pt-5">
-                  <span className="text-zinc-400">
-                    Deposit
-                  </span>
+                    <div className="flex justify-between border-t border-zinc-800 pt-5">
+                      <span className="text-zinc-400">Total</span>
+                      <span className="text-xl font-bold">
+                        {formatMoney(fullPaymentTotal)}€
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-400">
+                        Prix total
+                      </span>
 
-                  <span className="text-xl font-bold">
-                    {formatMoney(
-                      totalDeposit
-                    )}
-                    €
-                  </span>
-                </div>
+                      <span>
+                        {formatMoney(
+                          totalPrice
+                        )}
+                        €
+                      </span>
+                    </div>
 
-                <div className="flex justify-between">
-                  <span className="text-zinc-400">
-                    À payer sur
-                    place
-                  </span>
+                    <div className="flex justify-between border-t border-zinc-800 pt-5">
+                      <span className="text-zinc-400">
+                        Deposit
+                      </span>
 
-                  <span>
-                    {formatMoney(
-                      totalRemaining
-                    )}
-                    €
-                  </span>
-                </div>
+                      <span className="text-xl font-bold">
+                        {formatMoney(
+                          totalDeposit
+                        )}
+                        €
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-zinc-400">
+                        À payer sur
+                        place
+                      </span>
+
+                      <span>
+                        {formatMoney(
+                          totalRemaining
+                        )}
+                        €
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="mt-7 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
@@ -411,28 +459,40 @@ export default function CheckoutClient({
                 </p>
 
                 <p className="mt-2 text-xs leading-relaxed text-zinc-500">
-                  Tu seras
-                  redirigé vers
-                  Stripe pour
-                  payer le
-                  Deposit de{" "}
-                  <span className="text-zinc-300">
-                    {formatMoney(
-                      totalDeposit
-                    )}
-                    €
-                  </span>
-                  . Le montant
-                  restant de{" "}
-                  <span className="text-zinc-300">
-                    {formatMoney(
-                      totalRemaining
-                    )}
-                    €
-                  </span>{" "}
-                  sera payé
-                  directement sur
-                  place.
+                  {isFullPayment ? (
+                    <>
+                      Tu seras redirigé vers Stripe pour payer{" "}
+                      <span className="text-zinc-300">
+                        {formatMoney(fullPaymentTotal)}€
+                      </span>{" "}
+                      (montant total, frais de service K-RÉ inclus). Rien à payer sur place.
+                    </>
+                  ) : (
+                    <>
+                      Tu seras
+                      redirigé vers
+                      Stripe pour
+                      payer le
+                      Deposit de{" "}
+                      <span className="text-zinc-300">
+                        {formatMoney(
+                          totalDeposit
+                        )}
+                        €
+                      </span>
+                      . Le montant
+                      restant de{" "}
+                      <span className="text-zinc-300">
+                        {formatMoney(
+                          totalRemaining
+                        )}
+                        €
+                      </span>{" "}
+                      sera payé
+                      directement sur
+                      place.
+                    </>
+                  )}
                 </p>
               </div>
             </div>

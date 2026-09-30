@@ -12,9 +12,15 @@
     "test:refund": "node --test tests/refund-route.test.mjs",
     "test:reservation-email": "node --test tests/reservation-confirmed-email.test.mjs",
     "test:reservation-email-p1": "node --test tests/reservation-emails-p1.test.mjs",
+    "test:pricing": "node --test tests/pricing.test.mjs",
+    "test:full-payment": "node --test tests/full-payment.test.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:stripe-transfers": "node --test tests/stripe-transfers.test.mjs",
+    "test:full-payment-refund": "node --test tests/full-payment-refund.test.mjs",
+    "test:full-payment-supplement-refund": "node --test tests/full-payment-supplement-refund.test.mjs",
+    "test:full-payment-supplement": "node --test tests/full-payment-supplement.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

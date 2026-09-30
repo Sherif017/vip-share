@@ -6,6 +6,7 @@ import {
 } from "@/lib/admin-access";
 
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import StripeConnectStatusCard from "@/components/manager/StripeConnectStatusCard";
 
 type Club = {
   id: string;
@@ -173,6 +174,26 @@ export default async function AdminPage() {
       : 0;
 
   // ==========================================================
+  // STRIPE CONNECT (clubs gérés par ce compte)
+  // ==========================================================
+
+  const stripeClubIds = access.isManager
+    ? Array.from(new Set(events.map((event) => (Array.isArray(event.clubs) ? event.clubs[0]?.id : event.clubs?.id)).filter(Boolean)))
+    : access.managedClubIds;
+
+  const { data: stripeClubsData } = stripeClubIds.length > 0
+    ? await supabaseAdmin
+        .from("clubs")
+        .select("id, name, stripe_charges_enabled, stripe_onboarding_status")
+        .in("id", stripeClubIds as string[])
+    : { data: [] };
+
+  const stripeClubs = (stripeClubsData ?? []) as {
+    id: string; name: string; stripe_charges_enabled: boolean;
+    stripe_onboarding_status: "not_started" | "pending" | "complete";
+  }[];
+
+  // ==========================================================
   // UI
   // ==========================================================
 
@@ -225,6 +246,24 @@ export default async function AdminPage() {
             </Link>
           </div>
         </div>
+
+        {/* ==================================================
+            STRIPE CONNECT
+        ================================================== */}
+
+        {stripeClubs.length > 0 && (
+          <section className="mt-10 space-y-3">
+            {stripeClubs.map((c) => (
+              <StripeConnectStatusCard
+                key={c.id}
+                clubId={c.id}
+                clubName={c.name}
+                status={c.stripe_onboarding_status}
+                chargesEnabled={c.stripe_charges_enabled}
+              />
+            ))}
+          </section>
+        )}
 
         {/* ==================================================
             STATS

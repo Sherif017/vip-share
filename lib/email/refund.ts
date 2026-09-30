@@ -24,7 +24,7 @@ import { emailShell, factCard, factLine, formatEuros, RESERVATIONS_URL } from "@
 export async function dispatchRefundRequestedEmail(refund: {
   id: string;
   reservation_id: string;
-  payment_type: "initial_deposit" | "supplement";
+  payment_type: "initial_deposit" | "full_payment_initial" | "supplement";
   amount: number | null;
 }) {
   await claimAndSend({
@@ -39,7 +39,7 @@ export async function dispatchRefundRequestedEmail(refund: {
 export async function dispatchRefundCompletedEmail(refund: {
   id: string;
   reservation_id: string;
-  payment_type: "initial_deposit" | "supplement";
+  payment_type: "initial_deposit" | "full_payment_initial" | "supplement";
   amount: number | null;
 }) {
   await claimAndSend({
@@ -74,13 +74,15 @@ async function loadReservationContext(reservationId: string) {
   return { reservation, event };
 }
 
-function paymentTypeLabel(type: "initial_deposit" | "supplement") {
-  return type === "supplement" ? "Supplément" : "Deposit";
+function paymentTypeLabel(type: "initial_deposit" | "full_payment_initial" | "supplement") {
+  if (type === "supplement") return "Supplément";
+  if (type === "full_payment_initial") return "Paiement VIP";
+  return "Deposit";
 }
 
 async function buildRequestedMessage(refund: {
   reservation_id: string;
-  payment_type: "initial_deposit" | "supplement";
+  payment_type: "initial_deposit" | "full_payment_initial" | "supplement";
   amount: number | null;
 }) {
   const { reservation, event } = await loadReservationContext(refund.reservation_id);
@@ -114,7 +116,7 @@ async function buildRequestedMessage(refund: {
 
 async function buildCompletedMessage(refund: {
   reservation_id: string;
-  payment_type: "initial_deposit" | "supplement";
+  payment_type: "initial_deposit" | "full_payment_initial" | "supplement";
   amount: number | null;
 }) {
   const { reservation, event } = await loadReservationContext(refund.reservation_id);
