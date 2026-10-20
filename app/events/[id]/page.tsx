@@ -41,14 +41,33 @@ function money(value: number) {
 
 export default async function EventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+
+  // Next.js peut transmettre un segment déjà décodé ou encodé.
+  // Les anciens slugs contenant des espaces et accents restent valides.
+  let eventSlug = id;
+  try {
+    eventSlug = decodeURIComponent(id);
+  } catch {
+    // Conserver la valeur d'origine si l'encodage est invalide.
+  }
+
   const { data, error } = await supabase.from("events").select(`
     id, slug, name, event_date, start_time, end_time, music, image_url, table_map_url,
     clubs (name, city, address),
     vip_offers (id, table_number, total_table_price, capacity, confirmation_threshold, price_per_person, deposit_per_person, remaining_per_person, spots_reserved, booking_deadline, status)
-  `).eq("slug", id).eq("status", "published").single();
+  `).eq("slug", eventSlug).eq("status", "published").single();
 
   if (error || !data) {
-    console.error("Erreur chargement événement :", error);
+    console.error("Erreur chargement événement :", {
+      slug: eventSlug,
+      code: error?.code,
+      message: error?.message,
+    });
+
+    if (error && error.code !== "PGRST116") {
+      throw new Error("Impossible de charger la soirée.");
+    }
+
     notFound();
   }
 
@@ -143,7 +162,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
                   <div className="flex items-start justify-between gap-4"><div><p className="eyebrow">K-RÉ</p><h3 className="mt-1 font-display text-2xl text-cream">{offer.table_number}</h3></div><p className="text-right text-sm text-muted">{remaining}/{capacity}<br /><span className="text-xs">places libres</span></p></div>
                   <div className="mt-5 flex items-end justify-between gap-4"><div><p className="text-xs uppercase tracking-[0.14em] text-muted">Prix / personne</p><p className="mt-1 text-2xl font-semibold text-cream">{money(Number(offer.price_per_person))} €</p></div><p className="text-right text-xs text-muted">Deposit {money(Number(offer.deposit_per_person))} €<br />puis {money(Number(offer.remaining_per_person))} €</p></div>
                   <div className="mt-4 h-1 overflow-hidden rounded-full bg-[#111111]/[0.08]" aria-label={`${reserved} places réservées sur ${capacity}`}><div className="h-full rounded-full bg-champagne" style={{ width: `${percentage}%` }} /></div>
-                  {available ? <Link href={`/booking/${event.slug}?table=${offer.id}`} className="mt-5 flex min-h-11 items-center justify-center rounded-full bg-champagne px-5 text-sm font-semibold text-ink transition hover:bg-champagne-light">Réserver ma place <span className="ml-2" aria-hidden="true">→</span></Link> : <span className="mt-5 flex min-h-11 items-center justify-center rounded-full bg-[#111111]/[0.07] text-sm text-muted">{deadlinePassed || reservationsClosed ? "Réservations terminées" : "Complet"}</span>}
+                  {available ? <Link href={`/booking/${encodeURIComponent(event.slug)}?table=${offer.id}`} className="mt-5 flex min-h-11 items-center justify-center rounded-full bg-champagne px-5 text-sm font-semibold text-ink transition hover:bg-champagne-light">Réserver ma place <span className="ml-2" aria-hidden="true">→</span></Link> : <span className="mt-5 flex min-h-11 items-center justify-center rounded-full bg-[#111111]/[0.07] text-sm text-muted">{deadlinePassed || reservationsClosed ? "Réservations terminées" : "Complet"}</span>}
                 </article>
               );
             })}

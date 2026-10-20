@@ -13,7 +13,7 @@ export default function EventCard({ event, featured = false }: { event: Explorer
   const remaining = Math.max(Number(offer.capacity) - Number(offer.spots_reserved), 0);
   const date = new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "numeric", month: "short" }).format(new Date(`${event.event_date}T12:00:00`));
   return (
-    <Link href={`/events/${event.slug}`} className={`kr-event-link ${featured ? "kr-event-link-featured" : ""}`}>
+    <Link href={`/events/${encodeURIComponent(event.slug)}`} className={`kr-event-link ${featured ? "kr-event-link-featured" : ""}`}>
       <article className={`kr-event-card ${featured ? "kr-event-featured" : ""}`}>
         <div className="kr-event-media">
           {event.image_url ? <img src={event.image_url} alt="" loading={featured ? "eager" : "lazy"}/> : <div className="kr-photo-fallback"><KreLogo variant="fallback" /></div>}
