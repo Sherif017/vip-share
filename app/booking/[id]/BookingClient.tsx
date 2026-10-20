@@ -142,7 +142,7 @@ export default function BookingClient({
     <main className="kre-customer min-h-screen bg-black text-white">
       <section className="mx-auto max-w-5xl px-6 py-14">
         <Link
-          href={`/events/${slug}`}
+          href={`/events/${encodeURIComponent(slug)}`}
           className="mb-10 inline-block text-sm text-zinc-400 transition hover:text-white"
         >
           ← Retour à la soirée
@@ -373,7 +373,7 @@ export default function BookingClient({
 
               {canBook ? (
                 <Link
-                  href={`/checkout/${slug}?table=${encodeURIComponent(
+                  href={`/checkout/${encodeURIComponent(slug)}?table=${encodeURIComponent(
                     vipOfferId
                   )}&quantity=${quantity}`}
                   className="kre-primary-cta mt-8 block w-full rounded-2xl py-4 text-center font-semibold transition"

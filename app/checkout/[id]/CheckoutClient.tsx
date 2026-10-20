@@ -213,7 +213,7 @@ export default function CheckoutClient({
     <main className="kre-customer min-h-screen bg-black text-white">
       <section className="mx-auto max-w-5xl px-6 py-14">
         <Link
-          href={`/booking/${slug}?table=${encodeURIComponent(
+          href={`/booking/${encodeURIComponent(slug)}?table=${encodeURIComponent(
             vipOfferId
           )}`}
           className="mb-10 inline-block text-sm text-zinc-400 hover:text-white"

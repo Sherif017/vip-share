@@ -64,6 +64,15 @@ export default async function BookingPage({
   const { id } =
     await params;
 
+  let eventSlug = id;
+
+  try {
+    eventSlug = decodeURIComponent(id);
+  } catch {
+    // Conserver le slug original si son encodage est invalide.
+  }
+
+
   const query =
     await searchParams;
 
@@ -92,10 +101,7 @@ export default async function BookingPage({
           name
         )
       `)
-      .eq(
-        "slug",
-        id
-      )
+      .eq("slug", eventSlug)
       .eq(
         "status",
         "published"
