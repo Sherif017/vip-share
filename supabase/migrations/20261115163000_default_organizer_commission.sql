@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE public.clubs
+ALTER COLUMN commission_bps SET DEFAULT 1000;
+
+COMMIT;

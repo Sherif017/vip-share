@@ -205,6 +205,39 @@ export async function PATCH(
       );
     }
 
+
+    if (newStatus === "published") {
+      const { data: club, error: clubError } =
+        await supabaseAdmin
+          .from("clubs")
+          .select(
+            "stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled"
+          )
+          .eq("id", currentEvent.club_id)
+          .maybeSingle();
+
+      if (clubError) {
+        return NextResponse.json(
+          { error: "Impossible de vérifier les paiements." },
+          { status: 500 }
+        );
+      }
+
+      if (
+        !club?.stripe_account_id ||
+        !club.stripe_charges_enabled ||
+        !club.stripe_payouts_enabled
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Activez vos paiements Stripe avant de publier votre soirée.",
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     // ========================================================
     // 7. DÉJÀ DANS LE BON STATUT
     // ========================================================

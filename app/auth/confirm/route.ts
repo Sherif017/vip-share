@@ -20,12 +20,18 @@ export async function GET(request: NextRequest) {
   if (tokenHash && type) {
     const supabase = await createClient();
 
-    const { error } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       type,
       token_hash: tokenHash,
     });
 
     if (!error) {
+      if (
+        data.user?.user_metadata?.registrationType === "organizer"
+      ) {
+        redirectTo.pathname = "/organisateur/inscription";
+      }
+
       return NextResponse.redirect(redirectTo);
     }
 

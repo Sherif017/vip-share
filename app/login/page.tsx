@@ -44,8 +44,15 @@ export default function LoginPage() {
       return;
     }
 
-    router.replace("/events");
-    router.refresh();
+    const next = new URLSearchParams(
+      window.location.search
+    ).get("next");
+
+    window.location.assign(
+      next === "/organisateur/inscription"
+        ? "/auth/destination?next=/organisateur/inscription"
+        : "/auth/destination"
+    );
   }
 
   return (
@@ -164,6 +171,15 @@ export default function LoginPage() {
             Créer un compte
           </Link>
         </p>
+
+        <div className="mt-6 text-center">
+          <Link
+            href="/organisateur/inscription"
+            className="text-sm text-champagne hover:text-white"
+          >
+            Devenir organisateur →
+          </Link>
+        </div>
 
         <div className="mt-8 text-center">
           <Link

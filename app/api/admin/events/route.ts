@@ -820,8 +820,7 @@ export async function POST(
           table_map_url:
             null,
 
-          status:
-            "published",
+          status: "draft",
         })
         .select(
           "id, slug"

@@ -100,6 +100,40 @@ export default function HomePage() {
             Voir les soirées <span className="ml-2" aria-hidden="true">→</span>
           </Link>
         </section>
+
+        <section
+          className="kre-landing-section py-16 text-center"
+          aria-labelledby="organizer-title"
+        >
+          <p className="eyebrow text-champagne">
+            Vous organisez des soirées ?
+          </p>
+
+          <h2
+            id="organizer-title"
+            className="mt-4 font-display text-4xl tracking-tight text-cream sm:text-6xl"
+          >
+            Vos événements.<br />
+            Notre technologie.
+          </h2>
+
+          <p className="mx-auto mt-6 max-w-xl text-base leading-7 text-muted">
+            Développez votre audience, optimisez le remplissage
+            de vos tables VIP et gérez vos réservations
+            depuis un seul espace.
+          </p>
+
+          <Link
+            href="/organisateur/inscription"
+            className="kre-primary-cta mt-8 inline-flex min-h-12 items-center justify-center rounded-full px-7 py-3 text-sm font-semibold transition"
+          >
+            Devenir organisateur →
+          </Link>
+
+          <p className="mt-4 text-xs text-muted">
+            Inscription gratuite
+          </p>
+        </section>
       </PageContainer>
     </main>
   );

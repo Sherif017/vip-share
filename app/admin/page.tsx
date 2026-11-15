@@ -207,17 +207,17 @@ export default async function AdminPage() {
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
-              K-RÉ · Admin
+              {access.isManager ? "K-RÉ · Admin" : "K-RÉ · Organisateur"}
             </p>
 
             <h1 className="mt-3 text-4xl font-bold">
-              Dashboard
+              {access.isManager ? "Dashboard" : "Espace organisateur"}
             </h1>
 
             <p className="mt-3 text-zinc-400">
               {access.isManager
                 ? "Vue globale de tous les clubs K-RÉ."
-                : "Gère les soirées et tables de ton club."}
+                : "Gère tes événements, tes tables VIP et tes réservations."}
             </p>
           </div>
 

@@ -58,7 +58,7 @@ export default function MobileMenu({
 
   if (authenticated) {
     links.push({ href: "/reservations", label: "Réservations" });
-    if (isClubAdmin) links.push({ href: "/admin", label: "Admin" });
+    if (isClubAdmin) links.push({ href: "/admin", label: "Espace organisateur" });
     if (canScan) links.push({ href: "/admin/scan", label: "Scanner" });
     if (isManager) links.push({ href: "/manager", label: "Manager" });
   }

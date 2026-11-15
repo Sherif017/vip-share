@@ -53,6 +53,7 @@ export async function updateSession(request: NextRequest) {
     isPath("/events") ||
     isPath("/login") ||
     isPath("/register") ||
+    pathname === "/organisateur/inscription" ||
     isPath("/forgot-password") ||
     isPath("/auth") ||
     isPath("/legal") ||
@@ -76,7 +77,7 @@ export async function updateSession(request: NextRequest) {
     (isPath("/login") || isPath("/register"))
   ) {
     const url = request.nextUrl.clone();
-    url.pathname = "/events";
+    url.pathname = "/auth/destination";
 
     return NextResponse.redirect(url);
   }
