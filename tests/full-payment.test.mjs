@@ -455,3 +455,36 @@ test('D1. le modele legacy_deposit reste le defaut et fonctionne independamment 
   const res = await h.post();
   assert.equal(res.status, 400);
 });
+
+// ---------------------------------------------------------------------
+// E. Aucun fallback legacy pour une NOUVELLE reservation
+// ---------------------------------------------------------------------
+
+test("E1. CheckoutClient ne contient plus aucun appel a /api/reservations (legacy) -- garde-fou anti-regression", () => {
+  const source = readFileSync('app/checkout/[id]/CheckoutClient.tsx', 'utf8');
+  assert.ok(!source.includes('"/api/reservations"'), "CheckoutClient ne doit plus jamais appeler la route legacy");
+  assert.ok(source.includes('/api/reservations/full-payment'));
+  assert.ok(source.includes('salesEnabled'));
+});
+
+test('E2. club non pret -> aucune reservation (ni full_payment ni legacy) nest creee', async () => {
+  const h = harnessFullPayment();
+  h.state.club.commission_bps = null;
+  await h.post();
+  assert.equal(h.state.reservations.size, 0);
+  assert.equal(h.state.transactions.size, 0);
+});
+
+// ---------------------------------------------------------------------
+// F. Confidentialite : aucune donnee financiere interne exposee au client
+// ---------------------------------------------------------------------
+
+test("F1. la reponse de /api/reservations/full-payment ne contient jamais commission_bps/commission_cents/club_net_cents", async () => {
+  const h = harnessFullPayment();
+  const res = await h.post();
+  const body = await res.json();
+  const serialized = JSON.stringify(body);
+  assert.ok(!serialized.includes('commission'), "la commission K-RE ne doit jamais apparaitre dans la reponse client");
+  assert.ok(!serialized.includes('club_net'), "le net club ne doit jamais apparaitre dans la reponse client");
+  assert.deepEqual(Object.keys(body.reservation).sort(), ['code', 'currency', 'id', 'serviceFee', 'total', 'vipSubtotal']);
+});

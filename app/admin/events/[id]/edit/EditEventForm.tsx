@@ -84,12 +84,7 @@ export default function EditEventForm({
     initialValues.name
   );
 
-  const [
-    slug,
-    setSlug,
-  ] = useState(
-    initialValues.slug
-  );
+
 
   const [
     eventDate,
@@ -290,13 +285,13 @@ export default function EditEventForm({
             ),
 
           totalTablePrice:
-            1500,
+            0,
 
           capacity:
-            10,
+            0,
 
           confirmationThreshold:
-            6,
+            0,
 
           bookingDeadline:
             "",
@@ -518,10 +513,7 @@ export default function EditEventForm({
         name
       );
 
-      formData.append(
-        "slug",
-        slug
-      );
+
 
       formData.append(
         "eventDate",
@@ -662,7 +654,7 @@ export default function EditEventForm({
           Informations de la soirée
         </h2>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="mt-6 grid grid-cols-1 min-w-0 gap-4 md:grid-cols-2">
 
           <Input
             label="Nom"
@@ -673,14 +665,7 @@ export default function EditEventForm({
             required
           />
 
-          <Input
-            label="Slug"
-            value={slug}
-            onChange={
-              setSlug
-            }
-            required
-          />
+
 
           <Input
             label="Date"
@@ -765,7 +750,7 @@ export default function EditEventForm({
           Visuels
         </h2>
 
-        <div className="mt-6 grid gap-6 md:grid-cols-2">
+        <div className="mt-6 grid grid-cols-1 min-w-0 gap-6 md:grid-cols-2">
 
           <FileBlock
             label="Affiche de la soirée"
@@ -908,7 +893,7 @@ export default function EditEventForm({
 
                   </div>
 
-                  <div className="mt-7 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="mt-7 grid grid-cols-1 min-w-0 gap-4 md:grid-cols-2 lg:grid-cols-3">
 
                     <Input
                       label="Numéro de table"
@@ -1008,7 +993,7 @@ export default function EditEventForm({
 
                   {/* Calculs */}
 
-                  <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="mt-6 grid grid-cols-1 min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 
                     <CalculatedValue
                       label="Prix VIP / personne"
@@ -1140,7 +1125,7 @@ function Input({
   required?: boolean;
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <label className="block text-sm text-zinc-400">
         {label}
       </label>
@@ -1158,7 +1143,7 @@ function Input({
             e.target.value
           )
         }
-        className="mt-2 w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 outline-none transition focus:border-zinc-500"
+        className="mt-2 block w-full min-w-0 max-w-full box-border text-base rounded-xl border border-zinc-800 bg-black px-4 py-3 outline-none transition focus:border-zinc-500"
       />
     </div>
   );
@@ -1179,41 +1164,59 @@ function NumberInput({
   step,
 }: {
   label: string;
-
   value: number;
-
-  onChange: (
-    value: number
-  ) => void;
-
+  onChange: (value: number) => void;
   min?: number;
-
   max?: number;
-
   step?: number;
 }) {
+  const [draft, setDraft] = useState<string | null>(null);
+
+  const integerOnly = !label.toLowerCase().includes("prix");
+
+  const displayValue =
+    draft ?? (Number.isFinite(value) && value !== 0
+      ? String(value)
+      : "");
+
   return (
-    <div>
+    <div className="min-w-0">
       <label className="block text-sm text-zinc-400">
         {label}
       </label>
 
       <input
-        type="number"
-        value={value}
-        min={min}
-        max={max}
-        step={step}
-        onChange={(
-          e
-        ) =>
-          onChange(
-            Number(
-              e.target.value
-            )
-          )
+        type="text"
+        inputMode={integerOnly ? "numeric" : "decimal"}
+        placeholder={integerOnly ? "Ex : 10" : "Ex : 1000"}
+        value={displayValue}
+        required
+        onChange={(e) => {
+          let raw = e.target.value.replace(",", ".");
+
+          const valid = integerOnly
+            ? /^\d*$/.test(raw)
+            : /^\d*(?:\.\d{0,2})?$/.test(raw);
+
+          if (!valid) return;
+
+          raw = raw.replace(/^0+(?=\d)/, "");
+
+          if (raw.startsWith(".")) {
+            raw = "0" + raw;
+          }
+
+          setDraft(raw);
+          onChange(raw === "" ? 0 : Number(raw));
+        }}
+        onBlur={() => setDraft(null)}
+        className="mt-2 block w-full min-w-0 max-w-full box-border rounded-xl border border-zinc-800 bg-black px-4 py-3 text-base outline-none transition focus:border-zinc-500"
+        aria-label={label}
+        aria-invalid={
+          value !== 0 &&
+          ((min !== undefined && value < min) ||
+            (max !== undefined && value > max))
         }
-        className="mt-2 w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 outline-none transition focus:border-zinc-500"
       />
     </div>
   );

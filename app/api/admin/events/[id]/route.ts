@@ -134,14 +134,7 @@ export async function PATCH(
         ) ?? ""
       ).trim();
 
-    const slug =
-      String(
-        formData.get(
-          "slug"
-        ) ?? ""
-      )
-        .trim()
-        .toLowerCase();
+
 
     const eventDate =
       String(
@@ -193,7 +186,6 @@ export async function PATCH(
 
     if (
       !name ||
-      !slug ||
       !eventDate ||
       !startTime ||
       !endTime
@@ -490,35 +482,7 @@ export async function PATCH(
     |--------------------------------------------------------------------------
     */
 
-    const {
-      data: slugEvent,
-    } =
-      await supabaseAdmin
-        .from("events")
-        .select("id")
-        .eq(
-          "slug",
-          slug
-        )
-        .neq(
-          "id",
-          id
-        )
-        .maybeSingle();
 
-    if (
-      slugEvent
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Ce slug est déjà utilisé.",
-        },
-        {
-          status: 409,
-        }
-      );
-    }
 
     /*
     |--------------------------------------------------------------------------
@@ -910,7 +874,6 @@ export async function PATCH(
         .from("events")
         .update({
           name,
-          slug,
 
           event_date:
             eventDate,

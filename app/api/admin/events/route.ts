@@ -246,11 +246,15 @@ export async function POST(
         "name"
       );
 
-    const slug =
-      getString(
-        formData,
-        "slug"
-      ).toLowerCase();
+    const baseSlug =
+      name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 100)
+        .replace(/-+$/g, "") || "soiree";
 
     const eventDate =
       getString(
@@ -304,7 +308,6 @@ export async function POST(
 
     if (
       !name ||
-      !slug ||
       !eventDate ||
       !startTime ||
       !endTime
@@ -565,30 +568,7 @@ export async function POST(
     |--------------------------------------------------------------------------
     */
 
-    const {
-      data:
-        existingEvent,
-    } =
-      await supabaseAdmin
-        .from("events")
-        .select("id")
-        .eq(
-          "slug",
-          slug
-        )
-        .maybeSingle();
 
-    if (existingEvent) {
-      return NextResponse.json(
-        {
-          error:
-            "Ce slug est déjà utilisé.",
-        },
-        {
-          status: 409,
-        }
-      );
-    }
 
     /*
     |--------------------------------------------------------------------------
@@ -784,12 +764,8 @@ export async function POST(
     |--------------------------------------------------------------------------
     */
 
-    const {
-      data: event,
-      error:
-        eventInsertError,
-    } =
-      await supabaseAdmin
+    const insertEvent = (slug: string) =>
+      supabaseAdmin
         .from("events")
         .insert({
           club_id:
@@ -826,6 +802,19 @@ export async function POST(
           "id, slug"
         )
         .single();
+
+    let attempt = 1;
+    let result = await insertEvent(baseSlug);
+
+    while (result.error?.code === "23505" && attempt < 100) {
+      attempt += 1;
+      result = await insertEvent(`${baseSlug}-${attempt}`);
+    }
+
+    const {
+      data: event,
+      error: eventInsertError,
+    } = result;
 
     if (
       eventInsertError ||

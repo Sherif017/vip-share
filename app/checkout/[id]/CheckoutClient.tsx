@@ -10,122 +10,62 @@ import {
 
 type CheckoutClientProps = {
   slug: string;
-
   vipOfferId: string;
-
   tableNumber: string;
-
   clubName: string;
-
   eventName: string;
-
   quantity: number;
 
-  paymentModel: "full_payment";
-
+  /**
+   * Fausse côté serveur (lu via supabaseAdmin dans page.tsx, jamais via le
+   * client public). Aucune nouvelle réservation n'est créée si false — le
+   * bouton est désactivé ET la soumission est bloquée côté client ; la
+   * route /api/reservations/full-payment revérifie de toute façon
+   * elle-même ces conditions, ceci n'est qu'une amélioration UX.
+   */
   salesEnabled: boolean;
 
-  totalPrice: number;
-
-  totalDeposit: number;
-
-  totalRemaining: number;
-
   vipSubtotal: number;
-
   serviceFee: number;
-
   fullPaymentTotal: number;
 };
 
-function formatMoney(
-  value: number
-) {
-  return new Intl.NumberFormat(
-    "fr-FR",
-    {
-      minimumFractionDigits:
-        Number.isInteger(value)
-          ? 0
-          : 2,
-
-      maximumFractionDigits: 2,
-    }
-  ).format(value);
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("fr-FR", {
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 export default function CheckoutClient({
   slug,
-
   vipOfferId,
-
   tableNumber,
-
   clubName,
-
   eventName,
-
   quantity,
-
-  paymentModel,
-
   salesEnabled,
-
-  totalPrice,
-
-  totalDeposit,
-
-  totalRemaining,
-
   vipSubtotal,
-
   serviceFee,
-
   fullPaymentTotal,
 }: CheckoutClientProps) {
-  const isFullPayment = paymentModel === "full_payment";
-  const [
-    firstname,
-    setFirstname,
-  ] = useState("");
+  const [firstname, setFirstname] = useState("");
+  const [lastname, setLastname] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const submitLock = useRef(false);
   const checkoutAttemptId = useRef(crypto.randomUUID());
 
-  const [
-    lastname,
-    setLastname,
-  ] = useState("");
-
-  const [
-    email,
-    setEmail,
-  ] = useState("");
-
-  const [
-    phone,
-    setPhone,
-  ] = useState("");
-
-  const [
-    acceptedTerms,
-    setAcceptedTerms,
-  ] = useState(false);
-
-  const [
-    loading,
-    setLoading,
-  ] = useState(false);
-
-  const [
-    error,
-    setError,
-  ] = useState("");
-
-  async function handleSubmit(
-    e: FormEvent<HTMLFormElement>
-  ) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    // Double protection : le bouton est déjà disabled, mais on bloque
+    // aussi explicitement la soumission elle-même.
+    if (!salesEnabled) return;
 
     if (submitLock.current) return;
     submitLock.current = true;
@@ -133,76 +73,41 @@ export default function CheckoutClient({
     setError("");
 
     if (!acceptedTerms) {
-      setError(
-        "Tu dois accepter les conditions de réservation."
-      );
-
+      setError("Tu dois accepter les conditions de réservation.");
+      submitLock.current = false;
       return;
     }
 
     try {
       setLoading(true);
 
-      const response =
-        await fetch(
-          "/api/reservations/full-payment",
-          {
-            method: "POST",
+      const response = await fetch("/api/reservations/full-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventSlug: slug,
+          vipOfferId,
+          firstname,
+          lastname,
+          email,
+          phone,
+          quantity,
+          checkoutAttemptId: checkoutAttemptId.current,
+        }),
+      });
 
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
-                eventSlug:
-                  slug,
-
-                vipOfferId,
-
-                firstname,
-
-                lastname,
-
-                email,
-
-                phone,
-
-                quantity,
-
-                checkoutAttemptId:
-                  checkoutAttemptId.current,
-              }),
-          }
-        );
-
-      const result =
-        await response.json();
+      const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          result.error ||
-            "Impossible de créer la réservation."
-        );
+        throw new Error(result.error || "Impossible de créer la réservation.");
+      }
+      if (!result.checkoutUrl) {
+        throw new Error("URL de paiement introuvable.");
       }
 
-      if (
-        !result.checkoutUrl
-      ) {
-        throw new Error(
-          "URL de paiement introuvable."
-        );
-      }
-
-      window.location.href =
-        result.checkoutUrl;
+      window.location.href = result.checkoutUrl;
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Une erreur est survenue."
-      );
+      setError(err instanceof Error ? err.message : "Une erreur est survenue.");
     } finally {
       setLoading(false);
       submitLock.current = false;
@@ -213,9 +118,7 @@ export default function CheckoutClient({
     <main className="kre-customer min-h-screen bg-black text-white">
       <section className="mx-auto max-w-5xl px-6 py-14">
         <Link
-          href={`/booking/${encodeURIComponent(slug)}?table=${encodeURIComponent(
-            vipOfferId
-          )}`}
+          href={`/booking/${encodeURIComponent(slug)}?table=${encodeURIComponent(vipOfferId)}`}
           className="mb-10 inline-block text-sm text-zinc-400 hover:text-white"
         >
           ← Retour
@@ -228,125 +131,70 @@ export default function CheckoutClient({
             </p>
 
             <h1 className="mb-3 text-4xl font-bold md:text-5xl">
-              Finalise ta
-              réservation
+              Finalise ta réservation
             </h1>
 
+            {!salesEnabled && (
+              <div className="mb-8 rounded-2xl border border-amber-900 bg-amber-950/30 px-5 py-4">
+                <p className="text-sm text-amber-300">
+                  Les réservations VIP de cet établissement ne sont pas
+                  encore ouvertes.
+                </p>
+              </div>
+            )}
+
             <p className="mb-10 text-zinc-400">
-              Entre tes
-              informations pour
-              réserver tes places
-              sur la table n°
-              {tableNumber}.
+              Entre tes informations pour réserver tes places sur la table
+              n°{tableNumber}.
             </p>
 
             <form
-              onSubmit={
-                handleSubmit
-              }
+              onSubmit={handleSubmit}
               className="rounded-3xl border border-zinc-800 bg-zinc-950 p-7"
             >
-              <div className="grid gap-5 sm:grid-cols-2">
-                <Field
-                  label="Prénom"
-                  value={
-                    firstname
-                  }
-                  onChange={
-                    setFirstname
-                  }
-                  type="text"
-                />
+              <fieldset disabled={!salesEnabled} className="contents">
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field label="Prénom" value={firstname} onChange={setFirstname} type="text" />
+                  <Field label="Nom" value={lastname} onChange={setLastname} type="text" />
+                  <Field label="Email" value={email} onChange={setEmail} type="email" />
+                  <Field label="Téléphone" value={phone} onChange={setPhone} type="tel" />
+                </div>
 
-                <Field
-                  label="Nom"
-                  value={
-                    lastname
-                  }
-                  onChange={
-                    setLastname
-                  }
-                  type="text"
-                />
-
-                <Field
-                  label="Email"
-                  value={
-                    email
-                  }
-                  onChange={
-                    setEmail
-                  }
-                  type="email"
-                />
-
-                <Field
-                  label="Téléphone"
-                  value={
-                    phone
-                  }
-                  onChange={
-                    setPhone
-                  }
-                  type="tel"
-                />
-              </div>
-
-              <label className="mt-7 flex cursor-pointer gap-3">
-                <input
-                  type="checkbox"
-                  checked={
-                    acceptedTerms
-                  }
-                  onChange={(
-                    e
-                  ) =>
-                    setAcceptedTerms(
-                      e.target
-                        .checked
-                    )
-                  }
-                  className="mt-1"
-                />
-
-                <span className="text-sm text-zinc-400">
-                  J&apos;accepte
-                  les{" "}
-                  <Link
-                    href="/terms"
-                    target="_blank"
-                    onClick={(
-                      e
-                    ) =>
-                      e.stopPropagation()
-                    }
-                    className="text-white underline underline-offset-4 hover:text-zinc-300"
-                  >
-                    conditions de
-                    réservation
-                  </Link>{" "}
-                  et la politique
-                  d&apos;annulation.
-                </span>
-              </label>
+                <label className="mt-7 flex cursor-pointer gap-3">
+                  <input
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    className="mt-1"
+                  />
+                  <span className="text-sm text-zinc-400">
+                    J&apos;accepte les{" "}
+                    <Link
+                      href="/terms"
+                      target="_blank"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-white underline underline-offset-4 hover:text-zinc-300"
+                    >
+                      conditions de réservation
+                    </Link>{" "}
+                    et la politique d&apos;annulation.
+                  </span>
+                </label>
+              </fieldset>
 
               {error && (
                 <div className="mt-6 rounded-xl border border-red-900 bg-red-950/40 px-4 py-3">
-                  <p className="text-sm text-red-400">
-                    {error}
-                  </p>
+                  <p className="text-sm text-red-400">{error}</p>
                 </div>
               )}
 
               <button
                 type="submit"
-                disabled={
-                  loading
-                }
-                className="kre-primary-cta mt-8 w-full rounded-2xl py-4 font-semibold transition"
+                disabled={loading || !salesEnabled}
+                className="kre-primary-cta mt-8 w-full rounded-2xl py-4 font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {!salesEnabled
-                  ? "Réservations VIP bientôt disponibles"
+                  ? "Réservations non ouvertes"
                   : loading
                     ? "Redirection vers Stripe..."
                     : `Payer — ${formatMoney(fullPaymentTotal)}€`}
@@ -356,143 +204,48 @@ export default function CheckoutClient({
 
           <aside>
             <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-7 lg:sticky lg:top-8">
-              <p className="text-sm text-zinc-500">
-                Ta réservation
-              </p>
-
-              <h2 className="mt-1 text-2xl font-semibold">
-                {clubName}
-              </h2>
-
-              <p className="mt-1 text-zinc-400">
-                {eventName}
-              </p>
-
-              <p className="mt-3 text-sm font-medium">
-                K-RÉ
-                {tableNumber}
-              </p>
+              <p className="text-sm text-zinc-500">Ta réservation</p>
+              <h2 className="mt-1 text-2xl font-semibold">{clubName}</h2>
+              <p className="mt-1 text-zinc-400">{eventName}</p>
+              <p className="mt-3 text-sm font-medium">K-RÉ {tableNumber}</p>
 
               <div className="mt-7 space-y-5">
                 <div className="flex justify-between">
-                  <span className="text-zinc-400">
-                    Places
-                  </span>
-
-                  <span>
-                    {quantity}
-                  </span>
+                  <span className="text-zinc-400">Places</span>
+                  <span>{quantity}</span>
                 </div>
 
-                {isFullPayment ? (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-400">
-                        {quantity} place{quantity > 1 ? "s" : ""} VIP
-                      </span>
-                      <span>{formatMoney(vipSubtotal)}€</span>
-                    </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">
+                    {quantity} place{quantity > 1 ? "s" : ""} VIP
+                  </span>
+                  <span>{formatMoney(vipSubtotal)}€</span>
+                </div>
 
-                    <div className="flex justify-between">
-                      <span className="text-zinc-400">
-                        Frais de service K-RÉ
-                      </span>
-                      <span>{formatMoney(serviceFee)}€</span>
-                    </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Frais de service K-RÉ</span>
+                  <span>{formatMoney(serviceFee)}€</span>
+                </div>
 
-                    <div className="flex justify-between border-t border-zinc-800 pt-5">
-                      <span className="text-zinc-400">Total</span>
-                      <span className="text-xl font-bold">
-                        {formatMoney(fullPaymentTotal)}€
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-400">
-                        Prix total
-                      </span>
-
-                      <span>
-                        {formatMoney(
-                          totalPrice
-                        )}
-                        €
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between border-t border-zinc-800 pt-5">
-                      <span className="text-zinc-400">
-                        Deposit
-                      </span>
-
-                      <span className="text-xl font-bold">
-                        {formatMoney(
-                          totalDeposit
-                        )}
-                        €
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span className="text-zinc-400">
-                        À payer sur
-                        place
-                      </span>
-
-                      <span>
-                        {formatMoney(
-                          totalRemaining
-                        )}
-                        €
-                      </span>
-                    </div>
-                  </>
-                )}
+                <div className="flex justify-between border-t border-zinc-800 pt-5">
+                  <span className="text-zinc-400">Total</span>
+                  <span className="text-xl font-bold">
+                    {formatMoney(fullPaymentTotal)}€
+                  </span>
+                </div>
               </div>
 
               <div className="mt-7 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
                 <p className="text-sm font-medium text-zinc-300">
-                  Paiement
-                  sécurisé
+                  Paiement sécurisé
                 </p>
-
                 <p className="mt-2 text-xs leading-relaxed text-zinc-500">
-                  {isFullPayment ? (
-                    <>
-                      Tu seras redirigé vers Stripe pour payer{" "}
-                      <span className="text-zinc-300">
-                        {formatMoney(fullPaymentTotal)}€
-                      </span>{" "}
-                      (montant total, frais de service K-RÉ inclus). Rien à payer sur place.
-                    </>
-                  ) : (
-                    <>
-                      Tu seras
-                      redirigé vers
-                      Stripe pour
-                      payer le
-                      Deposit de{" "}
-                      <span className="text-zinc-300">
-                        {formatMoney(
-                          totalDeposit
-                        )}
-                        €
-                      </span>
-                      . Le montant
-                      restant de{" "}
-                      <span className="text-zinc-300">
-                        {formatMoney(
-                          totalRemaining
-                        )}
-                        €
-                      </span>{" "}
-                      sera payé
-                      directement sur
-                      place.
-                    </>
-                  )}
+                  Tu seras redirigé vers Stripe pour payer{" "}
+                  <span className="text-zinc-300">
+                    {formatMoney(fullPaymentTotal)}€
+                  </span>{" "}
+                  (montant total, frais de service K-RÉ inclus). Rien à payer
+                  sur place.
                 </p>
               </div>
             </div>
@@ -510,31 +263,19 @@ function Field({
   type,
 }: {
   label: string;
-
   value: string;
-
-  onChange: (
-    value: string
-  ) => void;
-
+  onChange: (value: string) => void;
   type: string;
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm text-zinc-400">
-        {label}
-      </label>
-
+      <label className="mb-2 block text-sm text-zinc-400">{label}</label>
       <input
         required
         type={type}
         value={value}
-        onChange={(e) =>
-          onChange(
-            e.target.value
-          )
-        }
-        className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 outline-none focus:border-zinc-500"
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 outline-none focus:border-zinc-500 disabled:opacity-50"
       />
     </div>
   );

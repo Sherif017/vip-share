@@ -1,4 +1,5 @@
 import Link from "next/link";
+import EventShareActions from "@/components/EventShareActions";
 
 import {
   notFound,
@@ -161,7 +162,9 @@ type EventData = {
 
 export default async function AdminEventPage({
   params,
+  searchParams,
 }: {
+  searchParams?: Promise<{ tab?: string | string[] }>;
   params: Promise<{
     id: string;
   }>;
@@ -658,9 +661,7 @@ export default async function AdminEventPage({
     fullPaymentVipCents / 100 +
     legacyDeposits;
 
-  const totalVipValue =
-    fullPaymentVipCents / 100 +
-    legacyRevenue;
+
 
   const remainingSpots =
     Math.max(
@@ -741,393 +742,183 @@ export default async function AdminEventPage({
   |--------------------------------------------------------------------------
   */
 
+  const requestedTab = (await searchParams)?.tab;
+  const tab = requestedTab === "reservations" || requestedTab === "finances" ? requestedTab : "tables";
+  const reviewCount = tables.filter(t => t.status === "admin_review").length;
+  const orphanReservations = reservations.filter(r => !tables.some(t => t.id === r.vip_offer_id));
+  function renderReservation(reservation: Reservation, tableName: string) {
+                                      const checkedIn =
+                                        Number(
+                                          reservation
+                                            .checked_in_quantity ??
+                                            0
+                                        );
+
+                                      const reservationQuantity =
+                                        Math.max(
+                                          Number(
+                                            reservation.quantity ??
+                                              0
+                                          ),
+                                          1
+                                        );
+
+                                      const progress =
+                                        Math.min(
+                                          100,
+                                          Math.round(
+                                            (
+                                              checkedIn /
+                                              reservationQuantity
+                                            ) *
+                                              100
+                                          )
+                                          );
+
+                                      const refundStates =
+                                        refundStatesByReservation.get(
+                                          reservation.id
+                                        ) ?? [];
+                                      const hasInitialRefundablePayment =
+                                        Boolean(
+                                          reservation.paid_at &&
+                                            reservation.stripe_checkout_session_id
+                                        );
+                                      const hasSupplementRefundablePayment =
+                                        reservation.supplement_status === "paid" &&
+                                        Boolean(
+                                          reservation.supplement_paid_at &&
+                                            (reservation.supplement_stripe_session_id ||
+                                              reservation.stripe_supplement_session_id)
+                                        );
+                                      const hasRefundablePayment =
+                                        hasInitialRefundablePayment ||
+                                        hasSupplementRefundablePayment;
+                                      const refundInProgress =
+                                        reservation.status === "refund_pending" ||
+                                        refundStates.some(
+                                          (state) =>
+                                            state.status === "refund_pending" ||
+                                            state.status === "refunding"
+                                        );
+                                      const allRefundsCompleted =
+                                        reservation.status === "refunded" ||
+                                        (refundStates.length > 0 &&
+                                          refundStates.every(
+                                            (state) => state.status === "refunded"
+                                          ));
+
+                                      const reservationTransactions =
+                                        (
+                                          transactionsByReservation.get(
+                                            reservation.id
+                                          ) ?? []
+                                        ).filter(
+                                          (transaction) =>
+                                            transaction.status === "confirmed"
+                                        );
+
+                                      const isFullPayment =
+                                        reservation.payment_model ===
+                                        "full_payment";
+
+                                      const reservationVipPaid =
+                                        isFullPayment
+                                          ? reservationTransactions.reduce(
+                                              (total, transaction) =>
+                                                total +
+                                                Number(
+                                                  transaction.vip_subtotal_cents ??
+                                                    0
+                                                ),
+                                              0
+                                            ) / 100
+                                          : Number(
+                                              reservation.deposit_paid ??
+                                                0
+                                            );
+
+                                      const reservationClubNet =
+                                        isFullPayment
+                                          ? reservationTransactions.reduce(
+                                              (total, transaction) =>
+                                                total +
+                                                Number(
+                                                  transaction.club_net_cents ??
+                                                    0
+                                                ),
+                                              0
+                                            ) / 100
+                                          : Number(
+                                              reservation.total_price ??
+                                                0
+                                            );
+
+                                      const reservationTransferStatus =
+                                        isFullPayment
+                                          ? getReservationTransferLabel(
+                                              reservationTransactions
+                                            )
+                                          : "Legacy";
+      return (
+        <details key={reservation.id} className="group rounded-2xl border border-zinc-800 bg-zinc-950">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 [&::-webkit-details-marker]:hidden">
+            <div className="min-w-0"><p className="break-words font-semibold">{reservation.firstname} {reservation.lastname}</p><p className="mt-1 text-xs text-zinc-400">{tableName} · {reservation.quantity} places · {checkedIn} entrée(s)</p></div>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2"><ReservationStatusBadge status={reservation.status}/><span aria-hidden="true" className="text-zinc-400 group-open:rotate-180">⌄</span></div>
+          </summary>
+          <div className="space-y-4 border-t border-zinc-800 p-4 text-sm">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TableInfo label="Référence" value={reservation.reservation_code}/>
+              <TableInfo label="Contact" value={`${reservation.email ?? "—"} · ${reservation.phone ?? "—"}`}/>
+              <TableInfo label="VIP payé" value={formatMoney(reservationVipPaid)}/>
+              <TableInfo label={isFullPayment ? "Net club" : "Valeur VIP (ancien modèle)"} value={formatMoney(reservationClubNet)}/>
+              <TableInfo label="Paiement" value={isFullPayment ? reservationTransferStatus : `Ancien modèle · ${formatMoney(Number(reservation.remaining_amount ?? 0))} sur place`}/>
+              <TableInfo label="Entrées" value={`${checkedIn}/${reservation.quantity}`}/>
+            </div>
+            <ProgressBar percentage={progress}/>
+            <div className="flex flex-wrap items-center gap-4">
+              {allRefundsCompleted ? <span className="text-green-400">Remboursée</span> : refundInProgress ? <span className="text-amber-300">Remboursement en cours</span> : hasRefundablePayment ? <AdminRefundButton reservationId={reservation.id}/> : null}
+              {reservation.status === "confirmed" && <Link href={`/confirmation/${reservation.reservation_code}`} className="underline underline-offset-4">Voir le pass</Link>}
+            </div>
+          </div>
+        </details>
+      );
+  }
   return (
     <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto max-w-7xl px-6 py-12">
-
-        {/* Retour */}
-
-        <Link
-          href="/admin"
-          className="text-sm text-zinc-500 transition hover:text-white"
-        >
-          ← Retour au dashboard
-        </Link>
-
-        {/* ===================================================== */}
-        {/* HEADER */}
-        {/* ===================================================== */}
-
-        <div className="mt-8 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
-              {club?.name ??
-                "Club"}
-
-              {club?.city
-                ? ` · ${club.city}`
-                : ""}
-            </p>
-
-            <h1 className="mt-3 text-4xl font-bold md:text-5xl">
-              {event.name}
-            </h1>
-
-            <p className="mt-3 capitalize text-zinc-400">
-              {formattedDate}
-              {" · "}
-              {event.start_time?.slice(
-                0,
-                5
-              )}
-            </p>
-
-            {event.music && (
-              <p className="mt-2 text-zinc-500">
-                {event.music}
-              </p>
-            )}
-
-            <div className="mt-4">
-              <EventStatusBadge
-                status={
-                  event.status
-                }
-              />
-            </div>
-
-            <div className="mt-5">
-              <EventStatusActions
-                eventId={
-                  event.id
-                }
-                currentStatus={
-                  event.status
-                }
-              />
-            </div>
+      <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 md:py-10">
+        <Link href="/admin" className="text-sm text-zinc-400 hover:text-white">← Mes soirées</Link>
+        <header className="mt-6 flex flex-wrap items-start justify-between gap-5">
+          <div><p className="text-xs uppercase tracking-widest text-zinc-400">{club?.name ?? "Club"}{club?.city ? ` · ${club.city}` : ""}</p><h1 className="mt-2 text-3xl font-bold tracking-tight md:text-5xl">{event.name}</h1><p className="mt-2 capitalize text-sm text-zinc-400">{formattedDate} · {event.start_time?.slice(0,5)}{event.music ? ` · ${event.music}` : ""}</p><div className="mt-3"><EventStatusBadge status={event.status}/></div></div>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/admin/events/${event.id}/edit`} className="rounded-full kre-primary-cta px-5 py-3 text-sm font-semibold">Modifier</Link>
+            <Link href={`/events/${encodeURIComponent(event.slug)}`} className="rounded-full border border-zinc-700 px-4 py-3 text-sm">Aperçu</Link>
+            <Link href="/admin/scan" className="rounded-full border border-zinc-700 px-4 py-3 text-sm">Scanner</Link>
           </div>
-
-          {/* Actions */}
-
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href={`/events/${event.slug}`}
-              className="rounded-full border border-zinc-700 px-5 py-3 text-sm transition hover:border-white"
-            >
-              Voir côté client
-            </Link>
-
-            <Link
-              href="/admin/scan"
-              className="rounded-full border border-zinc-700 px-5 py-3 text-sm transition hover:border-white"
-            >
-              Scanner les entrées
-            </Link>
-
-            <Link
-              href={`/admin/events/${event.id}/edit`}
-              className="rounded-full kre-primary-cta px-5 py-3 text-sm font-semibold transition hover:bg-zinc-200"
-            >
-              Modifier
-            </Link>
-          </div>
-        </div>
-
-        {/* ===================================================== */}
-        {/* STATISTIQUES GLOBALES */}
-        {/* ===================================================== */}
-
-        <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-
-          <StatCard
-            label="Tables"
-            value={
-              tables.length.toString()
-            }
-          />
-
-          <StatCard
-            label="Places confirmées"
-            value={`${confirmedPeople}/${totalCapacity}`}
-          />
-
-          <StatCard
-            label="Entrées"
-            value={`${totalCheckedIn}/${confirmedPeople}`}
-          />
-
-          <StatCard
-            label="Places restantes"
-            value={
-              remainingSpots.toString()
-            }
-          />
-
-          <StatCard
-            label="Remplissage"
-            value={`${globalFillRate}%`}
-          />
-
-          <StatCard
-            label="VIP payé en ligne"
-            value={
-              formatMoney(
-                totalOnlineVip
-              )
-            }
-          />
-
-          <StatCard
-            label="Net club"
-            value={
-              formatMoney(
-                fullPaymentClubNetCents /
-                  100
-              )
-            }
-          />
-
+        </header>
+        <details className="mt-4 rounded-2xl border border-zinc-800 p-4"><summary className="cursor-pointer text-sm font-medium">Publication et partage</summary><div className="mt-4 space-y-4"><EventStatusActions eventId={event.id} currentStatus={event.status}/><EventShareActions slug={event.slug} name={event.name} status={event.status}/></div></details>
+        <section className="mt-6 grid grid-cols-3 gap-2 sm:gap-4">
+          <StatCard label="Places confirmées" value={`${confirmedPeople}/${totalCapacity}`}/>
+          <StatCard label="Net club (intégral)" value={formatMoney(fullPaymentClubNetCents/100)}/>
+          <StatCard label="Entrées" value={`${totalCheckedIn}/${confirmedPeople}`}/>
         </section>
-
-        {/* ===================================================== */}
-        {/* SYNTHÈSE FINANCIÈRE */}
-        {/* ===================================================== */}
-
-        <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-
-          <BigStat
-            label="VIP encaissé en ligne"
-            value={
-              formatMoney(
-                totalOnlineVip
-              )
-            }
-            subtitle="Paiements VIP confirmés"
-          />
-
-          <BigStat
-            label="Commission K-RÉ"
-            value={
-              formatMoney(
-                fullPaymentCommissionCents /
-                  100
-              )
-            }
-            subtitle="Commission sur les paiements intégraux"
-          />
-
-          <BigStat
-            label="Net club"
-            value={
-              formatMoney(
-                fullPaymentClubNetCents /
-                  100
-              )
-            }
-            subtitle="Montant club après commission"
-          />
-
-          <BigStat
-            label="Déjà transféré"
-            value={
-              formatMoney(
-                transferredClubNetCents /
-                  100
-              )
-            }
-            subtitle="Vers le compte Stripe Connect du club"
-          />
-
-          <BigStat
-            label="À recevoir"
-            value={
-              formatMoney(
-                pendingClubNetCents /
-                  100
-              )
-            }
-            subtitle="Net club encore sous contrôle K-RÉ"
-          />
-
-        </section>
-
-        {legacyConfirmedReservations.length > 0 && (
-          <section className="mt-4 rounded-2xl border border-amber-900/40 bg-amber-950/10 p-5">
-            <p className="text-sm font-semibold text-amber-300">
-              Historique ancien modèle
-            </p>
-
-            <p className="mt-2 text-sm leading-6 text-amber-100/70">
-              {legacyConfirmedReservations.length} réservation
-              {legacyConfirmedReservations.length !== 1 ? "s" : ""} historique
-              {legacyConfirmedReservations.length !== 1 ? "s" : ""} utilisent encore
-              l&apos;ancien fonctionnement acompte + règlement au club.
-              Montant restant historique à encaisser :{" "}
-              <strong>
-                {formatMoney(legacyRemaining)}
-              </strong>.
-            </p>
-          </section>
-        )}
-
-        {/* ===================================================== */}
-        {/* ÉTAT GLOBAL */}
-        {/* ===================================================== */}
-
-        <section className="mt-6 grid gap-6 lg:grid-cols-2">
-
-          {/* Remplissage */}
-
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 md:p-8">
-            <div className="flex items-end justify-between gap-5">
-              <div>
-                <p className="text-sm text-zinc-500">
-                  Remplissage global
-                </p>
-
-                <h2 className="mt-2 text-2xl font-semibold">
-                  {confirmedPeople} /{" "}
-                  {totalCapacity} places
-                </h2>
-              </div>
-
-              <p className="text-3xl font-bold">
-                {globalFillRate}%
-              </p>
-            </div>
-
-            <ProgressBar
-              percentage={
-                globalFillRate
-              }
-            />
-
-            <div className="mt-6 grid grid-cols-2 gap-4">
-              <MiniStat
-                label="Confirmées"
-                value={
-                  confirmedPeople
-                }
-              />
-
-              <MiniStat
-                label="Disponibles"
-                value={
-                  remainingSpots
-                }
-              />
-            </div>
-
-            {pendingPeople > 0 && (
-              <div className="mt-4 rounded-2xl border border-yellow-900/50 bg-yellow-950/10 p-4">
-                <p className="text-sm text-yellow-400">
-                  {pendingPeople} place
-                  {pendingPeople >
-                  1
-                    ? "s"
-                    : ""}{" "}
-                  actuellement en attente de paiement.
-                </p>
-              </div>
-            )}
+        {reviewCount > 0 && <Link href="?tab=tables#tables" className="mt-4 block rounded-xl border border-amber-900/60 bg-amber-950/20 p-4 text-sm text-amber-300">{reviewCount} table(s) nécessitent une décision →</Link>}
+        {pendingPeople > 0 && <p className="mt-3 text-sm text-amber-300">{pendingPeople} place(s) en attente de paiement.</p>}
+        <nav aria-label="Gestion de la soirée" className="mt-8 grid grid-cols-3 gap-1 rounded-2xl bg-zinc-900 p-1">
+          {([{id:"tables",label:"Tables VIP"},{id:"reservations",label:"Réservations"},{id:"finances",label:"Finances"}] as const).map(item => <Link key={item.id} href={`?tab=${item.id}`} scroll={false} aria-current={tab === item.id ? "page" : undefined} className={`rounded-xl px-2 py-3 text-center text-xs font-semibold sm:text-sm ${tab === item.id ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white"}`}>{item.label}</Link>)}
+        </nav>
+        {tab === "finances" && <section className="mt-6 space-y-4">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5"><p className="text-sm text-zinc-400">Revenu net du club · paiement intégral</p><p className="mt-2 text-4xl font-bold">{formatMoney(fullPaymentClubNetCents/100)}</p></div>
+          <div className="divide-y divide-zinc-800 rounded-2xl border border-zinc-800 bg-zinc-950 px-5">
+            {[["VIP payé en ligne",totalOnlineVip],["Commission K-RÉ",fullPaymentCommissionCents/100],["Déjà transféré",transferredClubNetCents/100],["À recevoir",pendingClubNetCents/100]].map(([label,value]) => <div key={label} className="flex justify-between gap-4 py-4 text-sm"><span className="text-zinc-400">{label}</span><strong>{formatMoney(Number(value))}</strong></div>)}
           </div>
-
-          {/* Présence */}
-
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 md:p-8">
-            <div className="flex items-end justify-between gap-5">
-              <div>
-                <p className="text-sm text-zinc-500">
-                  Entrées dans le club
-                </p>
-
-                <h2 className="mt-2 text-2xl font-semibold">
-                  {totalCheckedIn} /{" "}
-                  {confirmedPeople} entrées
-                </h2>
-              </div>
-
-              <p className="text-3xl font-bold">
-                {globalCheckInRate}%
-              </p>
-            </div>
-
-            <ProgressBar
-              percentage={
-                globalCheckInRate
-              }
-            />
-
-            <div className="mt-6 grid grid-cols-2 gap-4">
-              <MiniStat
-                label="Entrées"
-                value={
-                  totalCheckedIn
-                }
-              />
-
-              <MiniStat
-                label="À venir"
-                value={Math.max(
-                  0,
-                  confirmedPeople -
-                    totalCheckedIn
-                )}
-              />
-            </div>
-          </div>
-
-        </section>
-
-        {/* ===================================================== */}
-        {/* TABLES */}
-        {/* ===================================================== */}
-
-        <section className="mt-14">
-          <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-zinc-600">
-              Gestion VIP
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold">
-              Tables
-            </h2>
-
-            <p className="mt-2 text-zinc-500">
-              {tables.length} table
-              {tables.length !==
-              1
-                ? "s"
-                : ""}{" "}
-              configurée
-              {tables.length !==
-              1
-                ? "s"
-                : ""}{" "}
-              pour cette soirée.
-            </p>
-          </div>
-
-          {tables.length ===
-          0 ? (
-            <div className="mt-6 rounded-3xl border border-zinc-800 bg-zinc-950 p-10 text-center">
-              <p className="text-zinc-400">
-                Aucune table configurée.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-8 space-y-8">
-              {tables.map(
-                (
-                  table
-                ) => {
-                  /*
-                  |--------------------------------------------------------------------------
-                  | Réservations de cette table
-                  |--------------------------------------------------------------------------
-                  */
-
+          {legacyConfirmedReservations.length > 0 && <div className="rounded-xl border border-amber-900/50 p-4 text-sm text-amber-300">Ancien modèle : {legacyConfirmedReservations.length} réservation(s) · {formatMoney(legacyDeposits)} d’acomptes · {formatMoney(legacyRemaining)} à encaisser au club · valeur VIP {formatMoney(legacyRevenue)}.</div>}
+        </section>}
+        {tab === "reservations" && <section className="mt-6 space-y-3"><h2 className="text-xl font-semibold">Réservations ({reservations.length})</h2>{reservations.length === 0 && <p className="text-zinc-400">Aucune réservation.</p>}{reservations.map(r => {const t = tables.find(t => t.id === r.vip_offer_id); return renderReservation(r, t ? `Table ${t.table_number}` : "Sans table");})}</section>}
+        {tab === "tables" && <section id="tables" className="mt-6 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-xl font-semibold">Tables VIP ({tables.length})</h2><p className="text-xs text-zinc-400">{remainingSpots} places restantes · {globalFillRate}% de remplissage · {globalCheckInRate}% d’entrées</p></div>
+          {tables.length === 0 && <p className="rounded-2xl border border-zinc-800 p-6 text-zinc-400">Aucune table configurée.</p>}
+          {tables.map(table => {
                   const tableReservations =
                     reservations.filter(
                       (
@@ -1336,750 +1127,25 @@ export default async function AdminEventPage({
                         tableConfirmedPeople
                     );
 
-                  return (
-                    <article
-                      key={
-                        table.id
-                      }
-                      className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950"
-                    >
-
-                      {/* ========================================= */}
-                      {/* HEADER TABLE */}
-                      {/* ========================================= */}
-
-                      <div className="border-b border-zinc-800 p-6 md:p-8">
-                        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-
-                          <div>
-                            <div className="flex flex-wrap items-center gap-3">
-                              <h3 className="text-3xl font-bold">
-                                Table n°
-                                {
-                                  table.table_number
-                                }
-                              </h3>
-
-                              <TableStatusBadge
-                                status={
-                                  table.status
-                                }
-                              />
-
-                              {thresholdReached ? (
-                                <span className="rounded-full border border-green-900 bg-green-950/20 px-3 py-1 text-xs font-medium text-green-400">
-                                  Seuil atteint
-                                </span>
-                              ) : (
-                                <span className="rounded-full border border-yellow-900 bg-yellow-950/20 px-3 py-1 text-xs font-medium text-yellow-400">
-                                  Seuil non atteint
-                                </span>
-                              )}
-                            </div>
-
-                            <p className="mt-3 text-zinc-500">
-                              {
-                                tableConfirmedPeople
-                              }{" "}
-                              /{" "}
-                              {
-                                tableCapacity
-                              }{" "}
-                              places confirmées
-                            </p>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-
-                            <CompactStat
-                              label="Réservés"
-                              value={`${tableConfirmedPeople}/${tableCapacity}`}
-                            />
-
-                            <CompactStat
-                              label="Entrés"
-                              value={`${tableCheckedIn}/${tableConfirmedPeople}`}
-                            />
-
-                            <CompactStat
-                              label="Disponibles"
-                              value={
-                                tableRemainingSpots.toString()
-                              }
-                            />
-
-                          </div>
-
-                        </div>
-
-                        {/* Progress bars */}
-
-                        <div className="mt-8 grid gap-6 lg:grid-cols-2">
-
-                          <div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-zinc-500">
-                                Remplissage
-                              </span>
-
-                              <span className="font-medium">
-                                {
-                                  tableFillRate
-                                }
-                                %
-                              </span>
-                            </div>
-
-                            <ProgressBar
-                              percentage={
-                                tableFillRate
-                              }
-                            />
-                          </div>
-
-                          <div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-zinc-500">
-                                Présence
-                              </span>
-
-                              <span className="font-medium">
-                                {
-                                  tableCheckInRate
-                                }
-                                %
-                              </span>
-                            </div>
-
-                            <ProgressBar
-                              percentage={
-                                tableCheckInRate
-                              }
-                            />
-                          </div>
-
-                        </div>
-
-                        {temporaryHolds >
-                          0 && (
-                          <div className="mt-5 rounded-2xl border border-yellow-900/50 bg-yellow-950/10 p-4">
-                            <p className="text-sm text-yellow-400">
-                              {
-                                temporaryHolds
-                              }{" "}
-                              place
-                              {temporaryHolds >
-                              1
-                                ? "s"
-                                : ""}{" "}
-                              temporairement bloquée
-                              {temporaryHolds >
-                              1
-                                ? "s"
-                                : ""}{" "}
-                              par un paiement en cours.
-                            </p>
-                          </div>
-                        )}
-
-                        {table.status ===
-                          "admin_review" && (
-                          <AdminReviewActions
-                            vipOfferId={
-                              table.id
-                            }
-                            tableNumber={
-                              String(
-                                table.table_number
-                              )
-                            }
-                            confirmedPeople={
-                              tableConfirmedPeople
-                            }
-                            confirmationThreshold={
-                              threshold
-                            }
-                          />
-                        )}
-                      </div>
-
-                      {/* ========================================= */}
-                      {/* INFOS TABLE */}
-                      {/* ========================================= */}
-
-                      <div className="border-b border-zinc-800 p-6 md:p-8">
-
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-
-                          <TableInfo
-                            label="Prix total table"
-                            value={
-                              formatMoney(
-                                Number(
-                                  table.total_table_price
-                                )
-                              )
-                            }
-                          />
-
-                          <TableInfo
-                            label="Prix / personne"
-                            value={
-                              formatMoney(
-                                Number(
-                                  table.price_per_person
-                                )
-                              )
-                            }
-                          />
-
-                          <TableInfo
-                            label="Paiement"
-                            value="100 % en ligne"
-                          />
-
-                          <TableInfo
-                            label="Frais client"
-                            value="Ajoutés au checkout K-RÉ"
-                          />
-
-                          <TableInfo
-                            label="Seuil"
-                            value={`${table.confirmation_threshold} pers.`}
-                          />
-
-                          <TableInfo
-                            label="Capacité"
-                            value={`${table.capacity} pers.`}
-                          />
-
-                          <TableInfo
-                            label="Deadline"
-                            value={
-                              formatDeadline(
-                                table.booking_deadline
-                              )
-                            }
-                          />
-
-                        </div>
-                      </div>
-
-                      {/* ========================================= */}
-                      {/* FINANCES TABLE */}
-                      {/* ========================================= */}
-
-                      <div className="border-b border-zinc-800 bg-black/30 p-6 md:p-8">
-
-                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-
-                          <FinanceCard
-                            label="VIP payé en ligne"
-                            value={
-                              formatMoney(
-                                tableOnlineVip
-                              )
-                            }
-                          />
-
-                          <FinanceCard
-                            label="Commission K-RÉ"
-                            value={
-                              formatMoney(
-                                tableCommissionCents /
-                                  100
-                              )
-                            }
-                          />
-
-                          <FinanceCard
-                            label="Net club"
-                            value={
-                              formatMoney(
-                                tableClubNetCents /
-                                  100
-                              )
-                            }
-                          />
-
-                          <FinanceCard
-                            label="Déjà transféré"
-                            value={
-                              formatMoney(
-                                tableTransferredCents /
-                                  100
-                              )
-                            }
-                          />
-
-                        </div>
-
-                        {tableLegacyReservations.length > 0 && (
-                          <p className="mt-4 text-xs text-amber-300">
-                            Legacy : {formatMoney(tableLegacyRemaining)} reste
-                            historiquement à encaisser directement au club.
-                          </p>
-                        )}
-                      </div>
-
-                      {/* ========================================= */}
-                      {/* PARTICIPANTS TABLE */}
-                      {/* ========================================= */}
-
-                      <div className="p-6 md:p-8">
-
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                          <div>
-                            <h4 className="text-xl font-semibold">
-                              Participants
-                            </h4>
-
-                            <p className="mt-1 text-sm text-zinc-500">
-                              {
-                                tableConfirmedPeople
-                              }{" "}
-                              place
-                              {tableConfirmedPeople !==
-                              1
-                                ? "s"
-                                : ""}{" "}
-                              confirmée
-                              {tableConfirmedPeople !==
-                              1
-                                ? "s"
-                                : ""}
-                            </p>
-                          </div>
-
-                          <p className="text-sm text-zinc-500">
-                            {
-                              tableReservations.length
-                            }{" "}
-                            réservation
-                            {tableReservations.length !==
-                            1
-                              ? "s"
-                              : ""}
-                          </p>
-                        </div>
-
-                        {tableReservations.length ===
-                        0 ? (
-                          <div className="mt-6 rounded-2xl border border-zinc-800 bg-black p-8 text-center">
-                            <p className="text-zinc-500">
-                              Aucune réservation sur cette table.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="mt-6 overflow-hidden rounded-2xl border border-zinc-800">
-
-                            <div className="overflow-x-auto">
-
-                              <table className="w-full min-w-[1250px] text-left">
-
-                                <thead className="bg-black text-xs uppercase tracking-wider text-zinc-500">
-                                  <tr>
-
-                                    <th className="px-5 py-4">
-                                      Participant
-                                    </th>
-
-                                    <th className="px-5 py-4">
-                                      Contact
-                                    </th>
-
-                                    <th className="px-5 py-4">
-                                      Places
-                                    </th>
-
-                                    <th className="px-5 py-4">
-                                      Entrées
-                                    </th>
-
-                                    <th className="px-5 py-4">
-                                      VIP payé
-                                    </th>
-
-                                    <th className="px-5 py-4">
-                                      Net club
-                                    </th>
-
-                                    <th className="px-5 py-4">
-                                      Paiement
-                                    </th>
-
-                                    <th className="px-5 py-4">
-                                      Statut
-                                    </th>
-
-                                    <th className="px-5 py-4">
-                                      Pass
-                                    </th>
-
-                                  </tr>
-                                </thead>
-
-                                <tbody className="divide-y divide-zinc-800">
-
-                                  {tableReservations.map(
-                                    (
-                                      reservation
-                                    ) => {
-                                      const checkedIn =
-                                        Number(
-                                          reservation
-                                            .checked_in_quantity ??
-                                            0
-                                        );
-
-                                      const reservationQuantity =
-                                        Math.max(
-                                          Number(
-                                            reservation.quantity ??
-                                              0
-                                          ),
-                                          1
-                                        );
-
-                                      const progress =
-                                        Math.min(
-                                          100,
-                                          Math.round(
-                                            (
-                                              checkedIn /
-                                              reservationQuantity
-                                            ) *
-                                              100
-                                          )
-                                          );
-
-                                      const refundStates =
-                                        refundStatesByReservation.get(
-                                          reservation.id
-                                        ) ?? [];
-                                      const hasInitialRefundablePayment =
-                                        Boolean(
-                                          reservation.paid_at &&
-                                            reservation.stripe_checkout_session_id
-                                        );
-                                      const hasSupplementRefundablePayment =
-                                        reservation.supplement_status === "paid" &&
-                                        Boolean(
-                                          reservation.supplement_paid_at &&
-                                            (reservation.supplement_stripe_session_id ||
-                                              reservation.stripe_supplement_session_id)
-                                        );
-                                      const hasRefundablePayment =
-                                        hasInitialRefundablePayment ||
-                                        hasSupplementRefundablePayment;
-                                      const refundInProgress =
-                                        reservation.status === "refund_pending" ||
-                                        refundStates.some(
-                                          (state) =>
-                                            state.status === "refund_pending" ||
-                                            state.status === "refunding"
-                                        );
-                                      const allRefundsCompleted =
-                                        reservation.status === "refunded" ||
-                                        (refundStates.length > 0 &&
-                                          refundStates.every(
-                                            (state) => state.status === "refunded"
-                                          ));
-
-                                      const reservationTransactions =
-                                        (
-                                          transactionsByReservation.get(
-                                            reservation.id
-                                          ) ?? []
-                                        ).filter(
-                                          (transaction) =>
-                                            transaction.status === "confirmed"
-                                        );
-
-                                      const isFullPayment =
-                                        reservation.payment_model ===
-                                        "full_payment";
-
-                                      const reservationVipPaid =
-                                        isFullPayment
-                                          ? reservationTransactions.reduce(
-                                              (total, transaction) =>
-                                                total +
-                                                Number(
-                                                  transaction.vip_subtotal_cents ??
-                                                    0
-                                                ),
-                                              0
-                                            ) / 100
-                                          : Number(
-                                              reservation.deposit_paid ??
-                                                0
-                                            );
-
-                                      const reservationClubNet =
-                                        isFullPayment
-                                          ? reservationTransactions.reduce(
-                                              (total, transaction) =>
-                                                total +
-                                                Number(
-                                                  transaction.club_net_cents ??
-                                                    0
-                                                ),
-                                              0
-                                            ) / 100
-                                          : Number(
-                                              reservation.total_price ??
-                                                0
-                                            );
-
-                                      const reservationTransferStatus =
-                                        isFullPayment
-                                          ? getReservationTransferLabel(
-                                              reservationTransactions
-                                            )
-                                          : "Legacy";
-
-                                      return (
-                                        <tr
-                                          key={
-                                            reservation.id
-                                          }
-                                          className="transition hover:bg-black"
-                                        >
-
-                                          {/* Participant */}
-
-                                          <td className="px-5 py-5">
-                                            <p className="font-medium">
-                                              {
-                                                reservation.firstname
-                                              }{" "}
-                                              {
-                                                reservation.lastname
-                                              }
-                                            </p>
-
-                                            <p className="mt-1 text-xs text-zinc-600">
-                                              {
-                                                reservation.reservation_code
-                                              }
-                                            </p>
-                                          </td>
-
-                                          {/* Contact */}
-
-                                          <td className="px-5 py-5 text-sm text-zinc-400">
-                                            <p>
-                                              {
-                                                reservation.email
-                                              }
-                                            </p>
-
-                                            <p className="mt-1">
-                                              {
-                                                reservation.phone
-                                              }
-                                            </p>
-                                          </td>
-
-                                          {/* Places */}
-
-                                          <td className="px-5 py-5">
-                                            <span className="font-medium">
-                                              {
-                                                reservation.quantity
-                                              }
-                                            </span>
-                                          </td>
-
-                                          {/* Entrées */}
-
-                                          <td className="px-5 py-5">
-                                            <div>
-                                              <p className="font-medium">
-                                                {
-                                                  checkedIn
-                                                }
-                                                {" / "}
-                                                {
-                                                  reservation.quantity
-                                                }
-                                              </p>
-
-                                              <div className="mt-2 h-1.5 w-20 overflow-hidden rounded-full bg-zinc-800">
-                                                <div
-                                                  className="h-full rounded-full bg-[#111111] transition-all"
-                                                  style={{
-                                                    width: `${progress}%`,
-                                                  }}
-                                                />
-                                              </div>
-
-                                              {checkedIn >=
-                                                Number(
-                                                  reservation.quantity
-                                                ) &&
-                                                isPassAccessible(reservation.status) && (
-                                                  <p className="mt-2 text-xs text-green-400">
-                                                    Complet
-                                                  </p>
-                                                )}
-
-                                            </div>
-                                          </td>
-
-                                          {/* VIP payé */}
-
-                                          <td className="px-5 py-5">
-                                            <p className="font-medium">
-                                              {formatMoney(
-                                                reservationVipPaid
-                                              )}
-                                            </p>
-
-                                            {!isFullPayment && (
-                                              <p className="mt-1 text-xs text-amber-400">
-                                                Acompte legacy
-                                              </p>
-                                            )}
-                                          </td>
-
-                                          {/* Net club */}
-
-                                          <td className="px-5 py-5">
-                                            <p className="font-medium">
-                                              {formatMoney(
-                                                reservationClubNet
-                                              )}
-                                            </p>
-
-                                            {!isFullPayment && (
-                                              <p className="mt-1 text-xs text-zinc-600">
-                                                Ancien modèle
-                                              </p>
-                                            )}
-                                          </td>
-
-                                          {/* Paiement */}
-
-                                          <td className="px-5 py-5">
-                                            <span
-                                              className={
-                                                isFullPayment
-                                                  ? "rounded-full bg-emerald-950/30 px-3 py-1 text-xs font-medium text-emerald-300"
-                                                  : "rounded-full bg-amber-950/30 px-3 py-1 text-xs font-medium text-amber-300"
-                                              }
-                                            >
-                                              {isFullPayment
-                                                ? reservationTransferStatus
-                                                : `Legacy · ${formatMoney(
-                                                    Number(
-                                                      reservation.remaining_amount ??
-                                                        0
-                                                    )
-                                                  )} sur place`}
-                                            </span>
-                                          </td>
-
-                                          {/* Statut */}
-
-                                          <td className="px-5 py-5">
-                                              <ReservationStatusBadge
-                                              status={
-                                                reservation.status
-                                              }
-                                              />
-                                            {allRefundsCompleted ? (
-                                              <p className="mt-2 text-xs text-green-400">
-                                                Remboursée
-                                              </p>
-                                            ) : refundInProgress ? (
-                                              <p className="mt-2 text-xs text-amber-300">
-                                                Remboursement en cours
-                                              </p>
-                                            ) : hasRefundablePayment ? (
-                                              <AdminRefundButton reservationId={reservation.id} />
-                                            ) : null}
-                                          </td>
-
-                                          {/* Pass */}
-
-                                          <td className="px-5 py-5">
-                                            {reservation.status ===
-                                            "confirmed" ? (
-                                              <Link
-                                                href={`/confirmation/${reservation.reservation_code}`}
-                                                className="text-sm text-white underline underline-offset-4 transition hover:text-zinc-300"
-                                              >
-                                                Voir le pass
-                                              </Link>
-                                            ) : (
-                                              <span className="text-sm text-zinc-600">
-                                                —
-                                              </span>
-                                            )}
-                                          </td>
-
-                                        </tr>
-                                      );
-                                    }
-                                  )}
-
-                                </tbody>
-                              </table>
-
-                            </div>
-                          </div>
-                        )}
-
-                      </div>
-
-                    </article>
-                  );
-                }
-              )}
-            </div>
-          )}
-        </section>
-
-        {/* ===================================================== */}
-        {/* RÉSERVATIONS HORS TABLE */}
-        {/* ===================================================== */}
-
-        {reservations.filter(
-          (
-            reservation
-          ) =>
-            !tables.some(
-              (
-                table
-              ) =>
-                table.id ===
-                reservation.vip_offer_id
-            )
-        ).length > 0 && (
-          <section className="mt-10 rounded-3xl border border-red-900/50 bg-red-950/10 p-6">
-            <h2 className="font-semibold text-red-400">
-              Réservations non rattachées
-            </h2>
-
-            <p className="mt-2 text-sm text-red-300/70">
-              Certaines réservations ne correspondent à aucune table actuellement configurée.
-            </p>
-          </section>
-        )}
-
+            return <details key={table.id} className="group rounded-2xl border border-zinc-800 bg-zinc-950">
+              <summary className="cursor-pointer list-none p-4 sm:p-5 [&::-webkit-details-marker]:hidden"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-lg font-semibold">Table {table.table_number}</h3><div className="flex items-center gap-2"><TableStatusBadge status={table.status}/><span aria-hidden="true" className="text-zinc-400 group-open:rotate-180">⌄</span></div></div><div className="mt-3 flex justify-between gap-3 text-sm"><span className="text-zinc-400">{tableConfirmedPeople}/{tableCapacity} places confirmées</span><strong>{formatMoney(tableClubNetCents/100)} <span className="text-xs font-normal text-zinc-400">net intégral</span></strong></div><ProgressBar percentage={tableFillRate}/></summary>
+              <div className="space-y-5 border-t border-zinc-800 p-4 sm:p-5">
+                <p className="text-sm text-zinc-400">{tableRemainingSpots} disponibles · {tableCheckedIn}/{tableConfirmedPeople} entrées ({tableCheckInRate}%) · {thresholdReached ? "Seuil atteint" : "Seuil non atteint"}</p>
+                {temporaryHolds > 0 && <p className="text-sm text-amber-300">{temporaryHolds} place(s) temporairement bloquées.</p>}
+                {table.status === "admin_review" && <AdminReviewActions vipOfferId={table.id} tableNumber={String(table.table_number)} confirmedPeople={tableConfirmedPeople} confirmationThreshold={threshold}/>}
+                <details className="rounded-xl border border-zinc-800 p-3"><summary className="cursor-pointer text-sm font-medium">Informations et finances de la table</summary><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <TableInfo label="Prix table" value={formatMoney(Number(table.total_table_price))}/><TableInfo label="Prix / personne" value={formatMoney(Number(table.price_per_person))}/><TableInfo label="Seuil" value={`${threshold} pers.`}/><TableInfo label="Date limite" value={formatDeadline(table.booking_deadline)}/><TableInfo label="Paiement" value="100 % en ligne (nouveau modèle)"/><TableInfo label="Frais client" value="Ajoutés au checkout K-RÉ"/><TableInfo label="VIP payé en ligne" value={formatMoney(tableOnlineVip)}/><TableInfo label="Commission K-RÉ" value={formatMoney(tableCommissionCents/100)}/><TableInfo label="Déjà transféré" value={formatMoney(tableTransferredCents/100)}/>
+                </div>{tableLegacyReservations.length > 0 && <p className="mt-3 text-sm text-amber-300">Ancien modèle : {formatMoney(tableLegacyRemaining)} à encaisser au club.</p>}</details>
+                <h4 className="font-semibold">Participants ({tableReservations.length})</h4>{tableReservations.length === 0 ? <p className="text-sm text-zinc-400">Aucune réservation.</p> : tableReservations.map(r => renderReservation(r, `Table ${table.table_number}`))}
+              </div>
+            </details>;
+          })}
+        </section>}
+        {orphanReservations.length > 0 && <Link href="?tab=reservations" className="mt-5 block rounded-xl border border-red-900/50 p-4 text-sm text-red-300">{orphanReservations.length} réservation(s) sans table configurée →</Link>}
       </div>
     </main>
   );
 }
-
-/*
-|--------------------------------------------------------------------------
-| Helpers
-|--------------------------------------------------------------------------
-*/
-
 function formatMoney(
   value: number
 ) {
@@ -2197,7 +1263,7 @@ function ProgressBar({
   return (
     <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-zinc-800">
       <div
-        className="h-full rounded-full bg-[#111111] transition-all"
+        className="h-full rounded-full bg-[#D4B77D] transition-all"
         style={{
           width: `${Math.min(
             Math.max(
@@ -2212,12 +1278,6 @@ function ProgressBar({
   );
 }
 
-/*
-|--------------------------------------------------------------------------
-| Stat Card
-|--------------------------------------------------------------------------
-*/
-
 function StatCard({
   label,
   value,
@@ -2226,107 +1286,17 @@ function StatCard({
   value: string;
 }) {
   return (
-    <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6">
-      <p className="text-sm text-zinc-500">
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3 sm:p-5">
+      <p className="text-xs text-zinc-400 sm:text-sm">
         {label}
       </p>
 
-      <p className="mt-3 text-2xl font-bold xl:text-3xl">
+      <p className="mt-2 break-words text-xl font-bold sm:text-3xl">
         {value}
       </p>
     </div>
   );
 }
-
-/*
-|--------------------------------------------------------------------------
-| Big Stat
-|--------------------------------------------------------------------------
-*/
-
-function BigStat({
-  label,
-  value,
-  subtitle,
-}: {
-  label: string;
-  value: string;
-  subtitle: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 md:p-8">
-      <p className="text-sm text-zinc-500">
-        {label}
-      </p>
-
-      <p className="mt-3 text-3xl font-bold">
-        {value}
-      </p>
-
-      <p className="mt-2 text-xs text-zinc-600">
-        {subtitle}
-      </p>
-    </div>
-  );
-}
-
-/*
-|--------------------------------------------------------------------------
-| Mini Stat
-|--------------------------------------------------------------------------
-*/
-
-function MiniStat({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="rounded-2xl border border-zinc-800 bg-black p-5">
-      <p className="text-sm text-zinc-500">
-        {label}
-      </p>
-
-      <p className="mt-2 text-2xl font-bold">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-/*
-|--------------------------------------------------------------------------
-| Compact Stat
-|--------------------------------------------------------------------------
-*/
-
-function CompactStat({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="min-w-[105px] rounded-2xl border border-zinc-800 bg-black px-4 py-3">
-      <p className="text-xs text-zinc-600">
-        {label}
-      </p>
-
-      <p className="mt-1 font-semibold">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-/*
-|--------------------------------------------------------------------------
-| Table Info
-|--------------------------------------------------------------------------
-*/
 
 function TableInfo({
   label,
@@ -2341,44 +1311,12 @@ function TableInfo({
         {label}
       </p>
 
-      <p className="mt-2 font-medium text-white">
+      <p className="mt-2 break-words font-medium text-white">
         {value}
       </p>
     </div>
   );
 }
-
-/*
-|--------------------------------------------------------------------------
-| Finance Card
-|--------------------------------------------------------------------------
-*/
-
-function FinanceCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-zinc-800 bg-black p-5">
-      <p className="text-sm text-zinc-500">
-        {label}
-      </p>
-
-      <p className="mt-2 text-2xl font-bold">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-/*
-|--------------------------------------------------------------------------
-| Reservation Status
-|--------------------------------------------------------------------------
-*/
 
 function ReservationStatusBadge({
   status,
@@ -2466,6 +1404,7 @@ function TableStatusBadge({
 }: {
   status: string;
 }) {
+  if (status === "admin_review") return <span className="rounded-full bg-amber-950/30 px-3 py-1 text-xs text-amber-300">Décision requise</span>;
   if (
     status === "forming"
   ) {

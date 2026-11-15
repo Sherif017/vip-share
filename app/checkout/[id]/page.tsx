@@ -76,6 +76,7 @@ export default async function CheckoutPage({
     // Conserver le slug original si son encodage est invalide.
   }
 
+
   const query =
     await searchParams;
 
@@ -233,16 +234,6 @@ export default async function CheckoutPage({
       offer.price_per_person
     );
 
-  const depositPerPerson =
-    Number(
-      offer.deposit_per_person
-    );
-
-  const remainingPerPerson =
-    Number(
-      offer.remaining_per_person
-    );
-
   // ==========================================================
   // Nouveau parcours K-RÉ :
   // - aucune nouvelle réservation ne repasse par legacy_deposit ;
@@ -310,20 +301,7 @@ export default async function CheckoutPage({
       quantity={
         quantity
       }
-      paymentModel="full_payment"
       salesEnabled={clubReady}
-      totalPrice={
-        pricePerPerson *
-        quantity
-      }
-      totalDeposit={
-        depositPerPerson *
-        quantity
-      }
-      totalRemaining={
-        remainingPerPerson *
-        quantity
-      }
       vipSubtotal={vipSubtotal}
       serviceFee={serviceFee}
       fullPaymentTotal={fullPaymentTotal}

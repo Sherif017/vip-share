@@ -30,9 +30,9 @@ function createEmptyTable(
   return {
     localId: crypto.randomUUID(),
     tableNumber: number,
-    totalTablePrice: 1000,
-    capacity: 10,
-    confirmationThreshold: 8,
+    totalTablePrice: 0,
+    capacity: 0,
+    confirmationThreshold: 0,
     bookingDeadline: "",
   };
 }
@@ -72,8 +72,7 @@ export default function NewEventForm({
   const [name, setName] =
     useState("");
 
-  const [slug, setSlug] =
-    useState("");
+
 
   const [eventDate, setEventDate] =
     useState("");
@@ -153,38 +152,6 @@ export default function NewEventForm({
       }
     };
   }, [mapPreview]);
-
-  function generateSlug(
-    value: string
-  ) {
-    return value
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(
-        /[\u0300-\u036f]/g,
-        ""
-      )
-      .replace(
-        /[^a-z0-9]+/g,
-        "-"
-      )
-      .replace(
-        /^-+|-+$/g,
-        ""
-      );
-  }
-
-  function handleNameChange(
-    value: string
-  ) {
-    setName(value);
-
-    if (!slug) {
-      setSlug(
-        generateSlug(value)
-      );
-    }
-  }
 
   function updateTable(
     localId: string,
@@ -389,10 +356,7 @@ export default function NewEventForm({
         name
       );
 
-      formData.append(
-        "slug",
-        slug
-      );
+
 
       formData.append(
         "eventDate",
@@ -587,7 +551,7 @@ export default function NewEventForm({
                     e.target.value
                   )
                 }
-                className="mt-2 w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 outline-none"
+                className="mt-2 block w-full min-w-0 max-w-full box-border text-base rounded-xl border border-zinc-800 bg-black px-4 py-3 outline-none"
               >
                 {clubs.map(
                   (club) => (
@@ -604,7 +568,7 @@ export default function NewEventForm({
             )}
           </div>
         ) : (
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="mt-6 grid grid-cols-1 min-w-0 gap-4 md:grid-cols-2">
             <Input
               label="Nom du club"
               value={clubName}
@@ -645,22 +609,17 @@ export default function NewEventForm({
           Soirée
         </h2>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="mt-6 grid grid-cols-1 min-w-0 gap-4 md:grid-cols-2">
           <Input
             label="Nom de la soirée"
             value={name}
             onChange={
-              handleNameChange
+              setName
             }
             required
           />
 
-          <Input
-            label="Slug"
-            value={slug}
-            onChange={setSlug}
-            required
-          />
+
 
           <Input
             label="Date"
@@ -716,7 +675,7 @@ export default function NewEventForm({
           plan des tables du club.
         </p>
 
-        <div className="mt-6 grid gap-6 md:grid-cols-2">
+        <div className="mt-6 grid grid-cols-1 min-w-0 gap-6 md:grid-cols-2">
           <ImagePicker
             label="Affiche / photo de la soirée"
             file={posterFile}
@@ -831,7 +790,7 @@ export default function NewEventForm({
                     )}
                   </div>
 
-                  <div className="mt-6 grid gap-4 md:grid-cols-2">
+                  <div className="mt-6 grid grid-cols-1 min-w-0 gap-4 md:grid-cols-2">
                     <Input
                       label="Numéro de table"
                       value={
@@ -937,7 +896,7 @@ export default function NewEventForm({
                     </div>
                   </div>
 
-                  <div className="mt-6 grid gap-3 md:grid-cols-2">
+                  <div className="mt-6 grid grid-cols-1 min-w-0 gap-3 md:grid-cols-2">
                     <SummaryCard
                       label="Prix VIP / personne"
                       value={`${pricePerPerson.toFixed(
@@ -996,7 +955,7 @@ function Input({
   placeholder?: string;
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <label className="block text-sm text-zinc-400">
         {label}
       </label>
@@ -1011,7 +970,7 @@ function Input({
             e.target.value
           )
         }
-        className="mt-2 w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 outline-none transition focus:border-zinc-500"
+        className="mt-2 block w-full min-w-0 max-w-full box-border text-base rounded-xl border border-zinc-800 bg-black px-4 py-3 outline-none transition focus:border-zinc-500"
       />
     </div>
   );
@@ -1027,33 +986,58 @@ function NumberInput({
 }: {
   label: string;
   value: number;
-  onChange: (
-    value: number
-  ) => void;
+  onChange: (value: number) => void;
   min?: number;
   max?: number;
   step?: number;
 }) {
+  const [draft, setDraft] = useState<string | null>(null);
+
+  const integerOnly = !label.toLowerCase().includes("prix");
+
+  const displayValue =
+    draft ?? (Number.isFinite(value) && value !== 0
+      ? String(value)
+      : "");
+
   return (
-    <div>
+    <div className="min-w-0">
       <label className="block text-sm text-zinc-400">
         {label}
       </label>
 
       <input
-        type="number"
-        value={value}
-        min={min}
-        max={max}
-        step={step}
-        onChange={(e) =>
-          onChange(
-            Number(
-              e.target.value
-            )
-          )
+        type="text"
+        inputMode={integerOnly ? "numeric" : "decimal"}
+        placeholder={integerOnly ? "Ex : 10" : "Ex : 1000"}
+        value={displayValue}
+        required
+        onChange={(e) => {
+          let raw = e.target.value.replace(",", ".");
+
+          const valid = integerOnly
+            ? /^\d*$/.test(raw)
+            : /^\d*(?:\.\d{0,2})?$/.test(raw);
+
+          if (!valid) return;
+
+          raw = raw.replace(/^0+(?=\d)/, "");
+
+          if (raw.startsWith(".")) {
+            raw = "0" + raw;
+          }
+
+          setDraft(raw);
+          onChange(raw === "" ? 0 : Number(raw));
+        }}
+        onBlur={() => setDraft(null)}
+        className="mt-2 block w-full min-w-0 max-w-full box-border rounded-xl border border-zinc-800 bg-black px-4 py-3 text-base outline-none transition focus:border-zinc-500"
+        aria-label={label}
+        aria-invalid={
+          value !== 0 &&
+          ((min !== undefined && value < min) ||
+            (max !== undefined && value > max))
         }
-        className="mt-2 w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 outline-none transition focus:border-zinc-500"
       />
     </div>
   );
@@ -1093,7 +1077,7 @@ function ImagePicker({
   ) => void;
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <label className="block text-sm text-zinc-400">
         {label}
       </label>

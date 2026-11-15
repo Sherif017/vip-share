@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AdminEventList from "@/components/AdminEventList";
 import { redirect } from "next/navigation";
 
 import {
@@ -131,48 +132,6 @@ export default async function AdminPage() {
   // STATS
   // ==========================================================
 
-  let totalTables = 0;
-  let totalCapacity = 0;
-  let totalReserved = 0;
-  let tablesToReview = 0;
-
-  for (const event of events) {
-    for (
-      const offer of
-      event.vip_offers ?? []
-    ) {
-      totalTables += 1;
-
-      totalCapacity +=
-        Number(
-          offer.capacity
-        );
-
-      totalReserved +=
-        Number(
-          offer.spots_reserved
-        );
-
-      if (
-        offer.status ===
-        "admin_review"
-      ) {
-        tablesToReview += 1;
-      }
-    }
-  }
-
-  const fillRate =
-    totalCapacity > 0
-      ? Math.round(
-          (
-            totalReserved /
-            totalCapacity
-          ) *
-            100
-        )
-      : 0;
-
   // ==========================================================
   // STRIPE CONNECT (clubs gérés par ce compte)
   // ==========================================================
@@ -197,347 +156,100 @@ export default async function AdminPage() {
   // UI
   // ==========================================================
 
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+
   return (
-    <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto max-w-7xl px-6 py-12">
-        {/* ==================================================
-            HEADER
-        ================================================== */}
+    <main className="min-h-screen bg-ink text-cream">
+      <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-12">
 
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
-              {access.isManager ? "K-RÉ · Admin" : "K-RÉ · Organisateur"}
+            <p className="text-xs text-muted">
+              Espace organisateur
             </p>
-
-            <h1 className="mt-3 text-4xl font-bold">
-              {access.isManager ? "Dashboard" : "Espace organisateur"}
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight">
+              Mes soirées
             </h1>
-
-            <p className="mt-3 text-zinc-400">
-              {access.isManager
-                ? "Vue globale de tous les clubs K-RÉ."
-                : "Gère tes événements, tes tables VIP et tes réservations."}
-            </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+
             {access.isManager && (
               <Link
                 href="/manager"
-                className="rounded-full border border-zinc-700 px-5 py-3 text-sm transition hover:border-white"
+                className="rounded-lg px-3 py-3 text-sm text-muted hover:text-cream"
               >
-                Espace Manager
+                Manager
               </Link>
             )}
 
             <Link
               href="/admin/scan"
-              className="rounded-full border border-zinc-700 px-5 py-3 text-sm transition hover:border-white"
+              className="rounded-lg border border-white/10 px-4 py-3 text-sm transition hover:bg-white/5"
             >
               Scanner
             </Link>
 
             <Link
               href="/admin/events/new"
-              className="rounded-full kre-primary-cta px-5 py-3 text-sm font-semibold transition hover:bg-zinc-200"
+              className="kre-primary-cta rounded-lg px-4 py-3 text-sm font-semibold"
             >
               + Créer une soirée
             </Link>
           </div>
-        </div>
+        </header>
 
-        {/* ==================================================
-            STRIPE CONNECT
-        ================================================== */}
-
-        {stripeClubs.length > 0 && (
-          <section className="mt-10 space-y-3">
-            {stripeClubs.map((c) => (
-              <StripeConnectStatusCard
-                key={c.id}
-                clubId={c.id}
-                clubName={c.name}
-                status={c.stripe_onboarding_status}
-                chargesEnabled={c.stripe_charges_enabled}
-              />
-            ))}
-          </section>
+        {error ? (
+          <p role="alert" className="mt-8 rounded-xl border border-red-900/40 p-4 text-sm text-red-400">
+            Impossible de charger les soirées. Actualisez la page.
+          </p>
+        ) : (
+          <AdminEventList events={events} today={today} />
         )}
 
-        {/* ==================================================
-            STATS
-        ================================================== */}
+        {stripeClubs.length > 0 && (
+          <details
+            className="mt-12 border-t border-white/10 pt-5"
+            open={stripeClubs.some((c) => !c.stripe_charges_enabled)}
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-2 text-sm">
+              <span className="text-muted">
+                Paiements
+              </span>
 
-        <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <StatCard
-            label="Soirées"
-            value={events.length.toString()}
-          />
+              <span className={
+                stripeClubs.every((c) => c.stripe_charges_enabled)
+                  ? "text-emerald-400"
+                  : "text-amber-400"
+              }>
+                {stripeClubs.every((c) => c.stripe_charges_enabled)
+                  ? "Activés"
+                  : "Configuration requise"}
+                {" · "}
+                <span className="text-zinc-500">Détails</span>
+              </span>
+            </summary>
 
-          <StatCard
-            label="Tables"
-            value={totalTables.toString()}
-          />
-
-          <StatCard
-            label="Places réservées"
-            value={`${totalReserved}/${totalCapacity}`}
-          />
-
-          <StatCard
-            label="Remplissage"
-            value={`${fillRate}%`}
-          />
-
-          <StatCard
-            label="Décisions requises"
-            value={tablesToReview.toString()}
-            important={
-              tablesToReview > 0
-            }
-          />
-        </section>
-
-        {/* ==================================================
-            EVENTS
-        ================================================== */}
-
-        <section className="mt-12">
-          <div>
-            <h2 className="text-2xl font-semibold">
-              Soirées
-            </h2>
-
-            <p className="mt-2 text-sm text-zinc-500">
-              {events.length} événement
-              {events.length > 1
-                ? "s"
-                : ""}
-            </p>
-          </div>
-
-          {events.length === 0 ? (
-            <div className="mt-8 rounded-3xl border border-zinc-800 bg-zinc-950 p-10 text-center">
-              <h3 className="text-xl font-semibold">
-                Aucune soirée
-              </h3>
-
-              <p className="mt-3 text-zinc-500">
-                Commence par créer une
-                soirée.
-              </p>
-
-              <Link
-                href="/admin/events/new"
-                className="mt-6 inline-block rounded-full kre-primary-cta px-6 py-3 font-semibold"
-              >
-                Créer une soirée
-              </Link>
+            <div className="mt-4 space-y-3">
+              {stripeClubs.map((c) => (
+                <StripeConnectStatusCard
+                  key={c.id}
+                  clubId={c.id}
+                  clubName={c.name}
+                  status={c.stripe_onboarding_status}
+                  chargesEnabled={c.stripe_charges_enabled}
+                />
+              ))}
             </div>
-          ) : (
-            <div className="mt-8 grid gap-5">
-              {events.map(
-                (event) => {
-                  const club =
-                    Array.isArray(
-                      event.clubs
-                    )
-                      ? event.clubs[0]
-                      : event.clubs;
+          </details>
+        )}
 
-                  const offers =
-                    event.vip_offers ??
-                    [];
-
-                  const eventCapacity =
-                    offers.reduce(
-                      (
-                        total,
-                        offer
-                      ) =>
-                        total +
-                        Number(
-                          offer.capacity
-                        ),
-                      0
-                    );
-
-                  const eventReserved =
-                    offers.reduce(
-                      (
-                        total,
-                        offer
-                      ) =>
-                        total +
-                        Number(
-                          offer.spots_reserved
-                        ),
-                      0
-                    );
-
-                  const reviewCount =
-                    offers.filter(
-                      (offer) =>
-                        offer.status ===
-                        "admin_review"
-                    ).length;
-
-                  const formattedDate =
-                    new Date(
-                      `${event.event_date}T12:00:00`
-                    ).toLocaleDateString(
-                      "fr-FR",
-                      {
-                        weekday:
-                          "long",
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      }
-                    );
-
-                  return (
-                    <Link
-                      key={event.id}
-                      href={`/admin/events/${event.id}`}
-                      className="group rounded-3xl border border-zinc-800 bg-zinc-950 p-6 transition hover:border-zinc-600"
-                    >
-                      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <p className="text-sm text-zinc-500">
-                            {club?.name ??
-                              "Club"}
-
-                            {club?.city
-                              ? ` · ${club.city}`
-                              : ""}
-                          </p>
-
-                          <h3 className="mt-2 text-2xl font-semibold">
-                            {event.name}
-                          </h3>
-
-                          <p className="mt-2 capitalize text-zinc-400">
-                            {
-                              formattedDate
-                            }
-
-                            {" · "}
-
-                            {event.start_time?.slice(
-                              0,
-                              5
-                            )}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-3">
-                          <InfoBadge>
-                            {
-                              offers.length
-                            }{" "}
-                            table
-                            {offers.length >
-                            1
-                              ? "s"
-                              : ""}
-                          </InfoBadge>
-
-                          <InfoBadge>
-                            {
-                              eventReserved
-                            }
-                            /
-                            {
-                              eventCapacity
-                            }{" "}
-                            places
-                          </InfoBadge>
-
-                          {reviewCount >
-                            0 && (
-                            <span className="rounded-full border border-amber-800 bg-amber-950/30 px-3 py-2 text-sm text-amber-400">
-                              {
-                                reviewCount
-                              }{" "}
-                              décision
-                              {reviewCount >
-                              1
-                                ? "s"
-                                : ""}{" "}
-                              requise
-                              {reviewCount >
-                              1
-                                ? "s"
-                                : ""}
-                            </span>
-                          )}
-
-                          <span className="text-zinc-600 transition group-hover:translate-x-1">
-                            →
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                }
-              )}
-            </div>
-          )}
-        </section>
       </div>
     </main>
-  );
-}
-
-// ============================================================
-// COMPONENTS
-// ============================================================
-
-function StatCard({
-  label,
-  value,
-  important = false,
-}: {
-  label: string;
-  value: string;
-  important?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-2xl border p-5 ${
-        important
-          ? "border-amber-900 bg-amber-950/20"
-          : "border-zinc-800 bg-zinc-950"
-      }`}
-    >
-      <p className="text-sm text-zinc-500">
-        {label}
-      </p>
-
-      <p
-        className={`mt-2 text-2xl font-bold ${
-          important
-            ? "text-amber-400"
-            : "text-white"
-        }`}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function InfoBadge({
-  children,
-}: {
-  children:
-    React.ReactNode;
-}) {
-  return (
-    <span className="rounded-full border border-zinc-800 px-3 py-2 text-sm text-zinc-400">
-      {children}
-    </span>
   );
 }
