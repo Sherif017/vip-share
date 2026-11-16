@@ -1,54 +1,99 @@
-# VIP Share
+# K-RÉ — Shared VIP tables
 
-Application Next.js de réservation de tables VIP avec Supabase, Stripe Checkout et rôles administratifs.
+> **The VIP table, without paying for the whole table.**
 
-## Installation et vérifications
+K-RÉ is a marketplace that lets people book **individual seats at a shared VIP table** in partner nightclubs. Customers pay only for their seats; clubs fill tables that would otherwise stay empty.
+
+**Status:** MVP, pre-launch (Paris).
+
+---
+
+## What it does
+
+**Customers**
+- Browse upcoming events and the VIP tables open for sharing
+- Book and pay for one or more seats online (Stripe Checkout)
+- Receive a QR-code pass by email
+
+**Clubs and organisers**
+- Create and manage events and VIP offers
+- Scan passes at the door, with partial check-in for groups
+- Follow reservations and receive their payout after each event
+
+**Platform admin**
+- Set each club's commission and onboard clubs to Stripe Connect
+- Decide what happens when a table does not fill up: accept it as is, ask participants for a supplement, merge it with another table, or refund
+
+## Engineering highlights
+
+- **Security-first payments**
+  - Stripe webhooks are verified by signature before anything is processed
+  - Prices and amounts are computed on the server, never trusted from the browser
+  - Idempotency keys on every checkout, refund and transfer, so a retry never charges or pays twice
+  - Sensitive database functions are revoked from `anon` and `authenticated` and only callable by the server
+- **Explicit state machines** for tables, reservations, merges, supplements and refunds ([docs/state-machine.md](./docs/state-machine.md))
+- **Role-based access** for customers, club staff, scanners and platform admins
+- **Scheduled maintenance**: an hourly Vercel Cron job, protected by a bearer secret, handles deadlines and expirations
+- **Automated tests** on pricing, checkout retries, refunds, supplements, transfers and transactional emails
+
+## Tech stack
+
+| Layer | Tools |
+|---|---|
+| Front end | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4 |
+| Back end | Next.js route handlers, Supabase (PostgreSQL, Auth, RPC functions) |
+| Payments | Stripe Checkout, Stripe Connect transfers, refunds, webhooks |
+| Email | Resend |
+| Check-in | QR codes (`qrcode.react`, `html5-qrcode`) |
+| Hosting | Vercel (with Vercel Cron) |
+| Tests | Node.js test runner |
+
+## Project structure
+
+```
+app/            Pages and API routes (booking, checkout, admin, manager, Stripe webhook, cron)
+components/     UI components
+lib/            Pricing, checkout, refunds, Stripe Connect transfers, emails, access control
+supabase/       SQL migrations, RPC catalogue, seeds and database tests
+tests/          Automated tests for payment, refund and email flows
+docs/           State machines, Stripe payment flows, staging workflow
+```
+
+## Getting started
 
 ```bash
 npm install
 npm run dev
+```
+
+Required environment variables (never commit their values, never put a secret in `NEXT_PUBLIC_*`):
+
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `CRON_SECRET`
+
+- Database migrations live in [supabase/migrations](./supabase/migrations) and are not applied automatically. See [supabase/README.md](./supabase/README.md).
+- The Stripe webhook endpoint is `/api/stripe/webhook`.
+- Vercel Cron calls `/api/cron/maintenance` every hour with `Authorization: Bearer $CRON_SECRET`.
+
+## Checks and tests
+
+```bash
 npx tsc --noEmit
 npm run lint
 npm run build -- --webpack
+
+npm run test:pricing
+npm run test:checkout-retry
+npm run test:refund
+npm run test:stripe-transfers
+npm run test:full-payment
 ```
 
-Variables nécessaires : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` et `CRON_SECRET`. Ne jamais committer leurs valeurs ni placer un secret dans `NEXT_PUBLIC_*`.
+## Documentation
 
-Les migrations additives sont dans [supabase/migrations](./supabase/migrations) et ne sont pas appliquées automatiquement. Voir [supabase/README.md](./supabase/README.md).
+- [State machines](./docs/state-machine.md)
+- [Stripe payment flows](./docs/stripe-payments.md)
+- [Staging workflow](./docs/staging-workflow.md)
 
-Le webhook Stripe utilise `/api/stripe/webhook`. Le Cron Vercel appelle `/api/cron/maintenance` chaque heure avec `Authorization: Bearer $CRON_SECRET`.
+## Author
 
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built by **Sheril Kuete Hanfo** — engineer (Mines Saint-Étienne), founder of K-RÉ.
