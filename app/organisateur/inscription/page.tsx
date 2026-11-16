@@ -143,7 +143,7 @@ export default function OrganizerRegistrationPage() {
           href="/"
           className="text-sm text-zinc-400"
         >
-          ← Retour à l'accueil
+          ← Retour à l&apos;accueil
         </Link>
 
         <div className="mb-8 mt-8 text-center">
