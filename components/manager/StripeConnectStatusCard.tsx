@@ -223,7 +223,7 @@ export default function StripeConnectStatusCard({
                 </p>
 
                 <h4 className="font-semibold text-cream">
-                  J'ai déjà un compte Stripe
+                  J&apos;ai déjà un compte Stripe
                 </h4>
 
                 <p className="mt-2 text-sm leading-relaxed text-zinc-400">
