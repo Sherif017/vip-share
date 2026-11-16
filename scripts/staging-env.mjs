@@ -22,6 +22,13 @@ export function validateEnvironment(env) {
   if (!env.STRIPE_SECRET_KEY?.startsWith("sk_test_")) {
     errors.push("STRIPE_SECRET_KEY: NOT TEST MODE");
   }
+  if (
+    env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim()
+    && !env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.startsWith("pk_test_")
+  ) {
+    errors.push("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: NOT TEST MODE");
+  }
+
   if (env.STAGING_DATABASE_URL?.trim()) {
     try {
       const url = new URL(env.STAGING_DATABASE_URL);
@@ -56,6 +63,26 @@ export function childEnvironment(staging, inherited) {
   for (const name of requiredVariables) env[name] = staging[name];
   // Explicitly prevent Next.js from filling this optional credential from .env.local.
   env.CRON_SECRET = staging.CRON_SECRET ?? "";
+
+  // Prevent Next.js from inheriting production Stripe configuration.
+  env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY =
+    staging.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+
+  env.STRIPE_CONNECT_CLIENT_ID =
+    staging.STRIPE_CONNECT_CLIENT_ID ?? "";
+
+  env.STRIPE_CONNECT_REDIRECT_URI =
+    staging.STRIPE_CONNECT_REDIRECT_URI ?? "";
+
+  env.STRIPE_CONNECT_WEBHOOK_SECRET =
+    staging.STRIPE_CONNECT_WEBHOOK_SECRET ?? "";
+
+  // OAuth remains disabled until staging configuration is validated.
+  env.STRIPE_CONNECT_OAUTH_ENABLED = "false";
+
+  // Prevent accidental production email delivery.
+  env.RESEND_API_KEY = "";
+
   env.NODE_ENV = "development";
   env.HISTFILE = "/dev/null";
   env.PSQL_HISTORY = "/dev/null";

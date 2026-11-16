@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { stripe } from "@/lib/stripe";
 
 import { getAdminAccess, canManageClub } from "@/lib/admin-access";
 import { ensureClubStripeAccount, createOnboardingLink } from "@/lib/stripe-connect";
@@ -32,14 +33,31 @@ export async function POST(
   try {
     const stripeAccountId = await ensureClubStripeAccount(clubId);
 
+    const account = await stripe.accounts.retrieve(stripeAccountId);
+
+    if (account.controller?.stripe_dashboard?.type !== "express") {
+      return NextResponse.json(
+        {
+          error: "Ce compte Stripe ne peut pas utiliser le parcours Express.",
+        },
+        { status: 409 }
+      );
+    }
+
     const origin = new URL(request.url).origin;
-    const returnUrl = `${origin}/manager/clubs/${clubId}?stripe=return`;
-    const refreshUrl = `${origin}/manager/clubs/${clubId}?stripe=refresh`;
+
+    const returnUrl = new URL("/admin", origin);
+    returnUrl.searchParams.set("stripe", "return");
+    returnUrl.searchParams.set("club_id", clubId);
+
+    const refreshUrl = new URL("/admin", origin);
+    refreshUrl.searchParams.set("stripe", "refresh");
+    refreshUrl.searchParams.set("club_id", clubId);
 
     const url = await createOnboardingLink({
       stripeAccountId,
-      returnUrl,
-      refreshUrl,
+      returnUrl: returnUrl.toString(),
+      refreshUrl: refreshUrl.toString(),
     });
 
     return NextResponse.json({ url });

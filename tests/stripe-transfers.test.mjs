@@ -43,6 +43,8 @@ function makeTxn(overrides = {}) {
       `kre_reservation_${RESERVATION_ID}`,
 
     transfer_status: "ready",
+    transfer_first_requested_at: null,
+    transfer_attempt_count: 0,
 
     ...overrides,
   };
@@ -139,6 +141,9 @@ function makeHarness({
   existingTransfers = [],
   createError = null,
   claimOverride = null,
+  completeError = null,
+  clubOverrides = {},
+  accountOverrides = {},
 } = {}) {
   const calls = {
     retrieveIntent: [],
@@ -154,6 +159,32 @@ function makeHarness({
 
   const db = {
     from(table) {
+      if (table === "clubs") {
+        const clubQuery = {
+          select() {
+            return clubQuery;
+          },
+          eq() {
+            return clubQuery;
+          },
+          async single() {
+            return {
+              data: {
+                stripe_account_id: txn.stripe_account_id,
+                stripe_connection_type: null,
+                stripe_oauth_revoked_at: null,
+                stripe_charges_enabled: true,
+                stripe_payouts_enabled: true,
+                ...clubOverrides,
+              },
+              error: null,
+            };
+          },
+        };
+
+        return clubQuery;
+      }
+
       assert.equal(
         table,
         "payment_transactions"
@@ -247,6 +278,11 @@ function makeHarness({
           ...currentTxn,
           transfer_status:
             "processing",
+          transfer_first_requested_at:
+            currentTxn.transfer_first_requested_at ??
+            new Date().toISOString(),
+          transfer_attempt_count:
+            currentTxn.transfer_attempt_count + 1,
         };
 
         return {
@@ -261,6 +297,13 @@ function makeHarness({
         name ===
         "complete_payment_transfer"
       ) {
+        if (completeError) {
+          return {
+            data: null,
+            error: completeError,
+          };
+        }
+
         currentTxn = {
           ...currentTxn,
           stripe_transfer_id:
@@ -332,6 +375,7 @@ function makeHarness({
         capabilities: {
           transfers: "active",
         },
+        ...accountOverrides,
       }),
     },
 
@@ -350,15 +394,12 @@ function makeHarness({
     },
 
     transfers: {
-      async list(params) {
-        calls
-          .listTransfers
-          .push(params);
+      async *list(params) {
+        calls.listTransfers.push(params);
 
-        return {
-          data:
-            existingTransfers,
-        };
+        for (const transfer of existingTransfers) {
+          yield transfer;
+        }
       },
 
       async create(
@@ -504,6 +545,10 @@ test(
 
       amount: 17000,
       currency: "eur",
+      destination: "acct_club_test",
+      source_transaction: "ch_existing",
+      reversed: false,
+      amount_reversed: 0,
 
       metadata: {
         payment_transaction_id:
@@ -562,7 +607,7 @@ test(
 );
 
 test(
-  "3. erreur Stripe : transaction repasse failed et reste retryable",
+  "3. erreur Stripe incertaine : transaction conserve processing",
   async () => {
     const harness =
       makeHarness({
@@ -590,13 +635,17 @@ test(
     assert.equal(
       harness.getTxn()
         .transfer_status,
-      "failed"
+      "processing"
     );
 
     assert.match(
-      harness.getTxn()
-        .transfer_last_error,
+      result.results[0].error,
       /temporary stripe error/
+    );
+
+    assert.equal(
+      harness.calls.createTransfer.length,
+      1
     );
 
     assert.equal(
@@ -606,7 +655,7 @@ test(
             call.name ===
             "fail_payment_transfer"
         ).length,
-      1
+      0
     );
   }
 );
@@ -778,6 +827,13 @@ test(
             stripe_charge_id:
               "ch_stale_processing",
 
+            transfer_first_requested_at:
+              new Date(
+                Date.now() - 60 * 60 * 1000
+              ).toISOString(),
+
+            transfer_attempt_count: 1,
+
             transfer_status:
               "processing",
           }),
@@ -816,3 +872,284 @@ test(
     );
   }
 );
+
+
+// ============================================================
+// TESTS AVANCES DE SECURITE FINANCIERE ET STRIPE OAUTH
+// ============================================================
+
+function recentAttempt(hours = 1) {
+  return new Date(
+    Date.now() - hours * 60 * 60 * 1000
+  ).toISOString();
+}
+
+function makeExistingTransfer(overrides = {}) {
+  return {
+    id: "tr_existing_security",
+    amount: 17000,
+    currency: "eur",
+    destination: "acct_club_test",
+    source_transaction: "ch_existing",
+    reversed: false,
+    amount_reversed: 0,
+    metadata: {
+      payment_transaction_id: TXN_ID,
+    },
+    ...overrides,
+  };
+}
+
+async function runSecurityScenario(options = {}) {
+  const harness = makeHarness(options);
+  const transferModule = loadModule(harness);
+  const result =
+    await transferModule.transferApprovedEvent(EVENT_ID);
+
+  assert.equal(result.results.length, 1);
+
+  return {
+    harness,
+    result: result.results[0],
+  };
+}
+
+function assertBlocked(harness, result, status, message) {
+  assert.equal(result.success, false);
+  assert.equal(harness.calls.createTransfer.length, 0);
+  assert.equal(harness.getTxn().transfer_status, status);
+  assert.match(result.error, message);
+}
+
+test("9. Echec de finalisation Supabase : maintien processing", async () => {
+  const { harness, result } = await runSecurityScenario({
+    completeError: new Error("database unavailable"),
+  });
+
+  assert.equal(result.success, false);
+  assert.equal(harness.calls.createTransfer.length, 1);
+  assert.equal(harness.getTxn().transfer_status, "processing");
+  assert.match(result.error, /database unavailable/);
+
+  assert.equal(
+    harness.calls.rpc.filter(
+      call => call.name === "fail_payment_transfer"
+    ).length,
+    0
+  );
+});
+
+test("10. Tentative ancienne de 25 heures : aucun nouveau transfert", async () => {
+  const { harness, result } = await runSecurityScenario({
+    txn: makeTxn({
+      transfer_status: "processing",
+      transfer_attempt_count: 1,
+      transfer_first_requested_at: recentAttempt(25),
+    }),
+  });
+
+  assertBlocked(
+    harness, result, "processing",
+    /Fenetre de reprise Stripe/
+  );
+});
+
+test("11. Ancien transfert retrouve : recuperation sans doublon", async () => {
+  const { harness, result } = await runSecurityScenario({
+    txn: makeTxn({
+      stripe_charge_id: "ch_existing",
+      transfer_status: "processing",
+      transfer_attempt_count: 3,
+      transfer_first_requested_at: recentAttempt(72),
+    }),
+    existingTransfers: [makeExistingTransfer()],
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.recovered, true);
+  assert.equal(harness.calls.createTransfer.length, 0);
+  assert.equal(harness.getTxn().transfer_status, "transferred");
+});
+
+test("12. Date historique inconnue : blocage preventif", async () => {
+  const { harness, result } = await runSecurityScenario({
+    txn: makeTxn({
+      transfer_status: "failed",
+      transfer_attempt_count: 2,
+      transfer_first_requested_at: "1970-01-01T00:00:00Z",
+    }),
+  });
+
+  assertBlocked(
+    harness, result, "processing",
+    /Fenetre de reprise Stripe/
+  );
+});
+
+test("13. Plusieurs transferts retrouves : blocage", async () => {
+  const { harness, result } = await runSecurityScenario({
+    txn: makeTxn({
+      stripe_charge_id: "ch_existing",
+    }),
+    existingTransfers: [
+      makeExistingTransfer(),
+      makeExistingTransfer({ id: "tr_duplicate" }),
+    ],
+  });
+
+  assertBlocked(
+    harness, result, "processing",
+    /Plusieurs transferts Stripe/
+  );
+});
+
+test("14. Montant Stripe incoherent : blocage", async () => {
+  const { harness, result } = await runSecurityScenario({
+    txn: makeTxn({
+      stripe_charge_id: "ch_existing",
+    }),
+    existingTransfers: [
+      makeExistingTransfer({ amount: 18000 }),
+    ],
+  });
+
+  assertBlocked(
+    harness, result, "processing",
+    /Transfert Stripe existant incoherent/
+  );
+});
+
+test("15. Destination Stripe incorrecte : blocage", async () => {
+  const { harness, result } = await runSecurityScenario({
+    txn: makeTxn({
+      stripe_charge_id: "ch_existing",
+    }),
+    existingTransfers: [
+      makeExistingTransfer({
+        destination: "acct_wrong_club",
+      }),
+    ],
+  });
+
+  assertBlocked(
+    harness, result, "processing",
+    /Transfert Stripe existant incoherent/
+  );
+});
+
+test("16. Transfert partiellement annule : blocage", async () => {
+  const { harness, result } = await runSecurityScenario({
+    txn: makeTxn({
+      stripe_charge_id: "ch_existing",
+    }),
+    existingTransfers: [
+      makeExistingTransfer({
+        amount_reversed: 1000,
+      }),
+    ],
+  });
+
+  assertBlocked(
+    harness, result, "processing",
+    /Transfert Stripe existant incoherent/
+  );
+});
+
+test("17. Compte OAuth revoque : aucun nouveau transfert", async () => {
+  const { harness, result } = await runSecurityScenario({
+    clubOverrides: {
+      stripe_connection_type: "oauth",
+      stripe_oauth_revoked_at: new Date().toISOString(),
+    },
+  });
+
+  assertBlocked(
+    harness, result, "failed",
+    /revoquee/
+  );
+});
+
+test("18. Compte OAuth non operationnel : blocage", async () => {
+  const { harness, result } = await runSecurityScenario({
+    clubOverrides: {
+      stripe_connection_type: "oauth",
+      stripe_charges_enabled: false,
+      stripe_payouts_enabled: false,
+    },
+  });
+
+  assertBlocked(
+    harness, result, "failed",
+    /pas operationnel/
+  );
+});
+
+test("19. Compte Stripe du club modifie : blocage", async () => {
+  const { harness, result } = await runSecurityScenario({
+    clubOverrides: {
+      stripe_account_id: "acct_another_club",
+    },
+  });
+
+  assertBlocked(
+    harness, result, "failed",
+    /ne correspond plus/
+  );
+});
+
+test("20. Capability transfers inactive : blocage", async () => {
+  const { harness, result } = await runSecurityScenario({
+    accountOverrides: {
+      capabilities: {
+        transfers: "inactive",
+      },
+    },
+  });
+
+  assertBlocked(
+    harness, result, "failed",
+    /transfers du club/
+  );
+});
+
+test("21. Recuperation d'un transfert apres revocation OAuth", async () => {
+  const { harness, result } = await runSecurityScenario({
+    txn: makeTxn({
+      stripe_charge_id: "ch_existing",
+      transfer_status: "processing",
+      transfer_attempt_count: 1,
+      transfer_first_requested_at: recentAttempt(2),
+    }),
+    clubOverrides: {
+      stripe_connection_type: "oauth",
+      stripe_oauth_revoked_at: new Date().toISOString(),
+      stripe_charges_enabled: false,
+      stripe_payouts_enabled: false,
+    },
+    existingTransfers: [makeExistingTransfer()],
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.recovered, true);
+  assert.equal(harness.calls.createTransfer.length, 0);
+  assert.equal(harness.getTxn().transfer_status, "transferred");
+});
+
+test("22. Reprise incertaine apres revocation : maintien processing", async () => {
+  const { harness, result } = await runSecurityScenario({
+    txn: makeTxn({
+      transfer_status: "processing",
+      transfer_attempt_count: 1,
+      transfer_first_requested_at: recentAttempt(2),
+    }),
+    clubOverrides: {
+      stripe_connection_type: "oauth",
+      stripe_oauth_revoked_at: new Date().toISOString(),
+    },
+  });
+
+  assertBlocked(
+    harness, result, "processing",
+    /revoquee/
+  );
+});

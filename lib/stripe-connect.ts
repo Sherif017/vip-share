@@ -63,7 +63,22 @@ export async function ensureClubStripeAccount(clubId: string) {
 
   if (updateError) throw updateError;
 
-  return account.id;
+  // Toujours retourner le compte reellement associe au club,
+  // meme si une autre demande a gagne la course.
+  const { data: linkedClub, error: linkedError } =
+    await supabaseAdmin
+      .from("clubs")
+      .select("stripe_account_id")
+      .eq("id", clubId)
+      .single();
+
+  if (linkedError) throw linkedError;
+
+  if (!linkedClub?.stripe_account_id) {
+    throw new Error("Association Stripe introuvable.");
+  }
+
+  return linkedClub.stripe_account_id;
 }
 
 export async function createOnboardingLink(params: {
@@ -99,9 +114,38 @@ export async function applyStripeAccountSnapshot(account: {
   payouts_enabled?: boolean | null;
   details_submitted?: boolean | null;
 }) {
-  const chargesEnabled = Boolean(account.charges_enabled);
-  const payoutsEnabled = Boolean(account.payouts_enabled);
-  const detailsSubmitted = Boolean(account.details_submitted);
+  const { data: club, error: clubError } = await supabaseAdmin
+    .from("clubs")
+    .select("id, stripe_connection_type, stripe_oauth_revoked_at, stripe_oauth_connected_at")
+    .eq("stripe_account_id", account.id)
+    .maybeSingle();
+
+  if (clubError) throw clubError;
+
+  if (!club || club.stripe_oauth_revoked_at) {
+    return null;
+  }
+
+  let chargesEnabled = Boolean(account.charges_enabled);
+  let payoutsEnabled = Boolean(account.payouts_enabled);
+  let detailsSubmitted = Boolean(account.details_submitted);
+
+  if (club.stripe_connection_type === "oauth") {
+    // Ne jamais reactiver un compte OAuth sur la seule
+    // base d'un ancien evenement Stripe.
+    const currentAccount = await stripe.accounts.retrieve(account.id);
+
+    const ready =
+      currentAccount.controller?.stripe_dashboard?.type === "full" &&
+      currentAccount.capabilities?.transfers === "active" &&
+      currentAccount.charges_enabled &&
+      currentAccount.payouts_enabled &&
+      currentAccount.details_submitted;
+
+    chargesEnabled = Boolean(ready);
+    payoutsEnabled = Boolean(ready);
+    detailsSubmitted = Boolean(currentAccount.details_submitted);
+  }
 
   const onboardingStatus = chargesEnabled
     ? "complete"
@@ -109,7 +153,7 @@ export async function applyStripeAccountSnapshot(account: {
       ? "pending"
       : "pending";
 
-  const { data, error } = await supabaseAdmin
+  const updateQuery = supabaseAdmin
     .from("clubs")
     .update({
       stripe_charges_enabled: chargesEnabled,
@@ -118,7 +162,29 @@ export async function applyStripeAccountSnapshot(account: {
       stripe_onboarding_status: onboardingStatus,
       stripe_account_updated_at: new Date().toISOString(),
     })
+    .eq("id", club.id)
     .eq("stripe_account_id", account.id)
+    .is("stripe_oauth_revoked_at", null);
+
+  if (club.stripe_connection_type === null) {
+    updateQuery.is("stripe_connection_type", null);
+  } else {
+    updateQuery.eq(
+      "stripe_connection_type",
+      club.stripe_connection_type
+    );
+  }
+
+  if (club.stripe_oauth_connected_at === null) {
+    updateQuery.is("stripe_oauth_connected_at", null);
+  } else {
+    updateQuery.eq(
+      "stripe_oauth_connected_at",
+      club.stripe_oauth_connected_at
+    );
+  }
+
+  const { data, error } = await updateQuery
     .select("id, name")
     .maybeSingle();
 

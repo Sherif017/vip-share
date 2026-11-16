@@ -16,7 +16,30 @@ type TransferTxn = {
   stripe_transfer_id: string | null;
   transfer_group: string;
   transfer_status: string;
+  transfer_first_requested_at: string | null;
+  transfer_attempt_count: number;
 };
+
+const TRANSFER_RETRY_WINDOW_MS =
+  20 * 60 * 60 * 1000;
+
+function assertTransferRetryWindow(txn: TransferTxn) {
+  const firstAttempt = txn.transfer_first_requested_at
+    ? Date.parse(txn.transfer_first_requested_at)
+    : NaN;
+
+  const age = Date.now() - firstAttempt;
+
+  if (
+    !Number.isFinite(firstAttempt) ||
+    age < 0 ||
+    age >= TRANSFER_RETRY_WINDOW_MS
+  ) {
+    throw new Error(
+      "Fenetre de reprise Stripe depassee ou inconnue. Verification manuelle requise."
+    );
+  }
+}
 
 async function resolveChargeId(
   txn: TransferTxn
@@ -67,28 +90,57 @@ async function resolveChargeId(
 }
 
 async function recoverExistingTransfer(
-  txn: TransferTxn
+  txn: TransferTxn,
+  chargeId: string
 ) {
-  const transfers =
-    await stripe.transfers.list({
-      transfer_group:
-        txn.transfer_group,
-      limit: 100,
-    });
+  const matches = [];
 
-  return (
-    transfers.data.find(
-      (transfer) =>
-        transfer.metadata
-          ?.payment_transaction_id ===
-          txn.id &&
-        transfer.amount ===
-          txn.club_net_cents &&
-        transfer.currency.toLowerCase() ===
-          txn.currency.toLowerCase()
-    ) ?? null
-  );
+  for await (const transfer of stripe.transfers.list({
+    transfer_group: txn.transfer_group,
+    limit: 100,
+  })) {
+    if (
+      transfer.metadata?.payment_transaction_id !== txn.id
+    ) {
+      continue;
+    }
+
+    const destination =
+      typeof transfer.destination === "string"
+        ? transfer.destination
+        : transfer.destination?.id ?? null;
+
+    const sourceTransaction =
+      typeof transfer.source_transaction === "string"
+        ? transfer.source_transaction
+        : transfer.source_transaction?.id ?? null;
+
+    if (
+      transfer.amount !== txn.club_net_cents ||
+      transfer.currency.toLowerCase() !==
+        txn.currency.toLowerCase() ||
+      destination !== txn.stripe_account_id ||
+      sourceTransaction !== chargeId ||
+      transfer.reversed ||
+      transfer.amount_reversed > 0
+    ) {
+      throw new Error(
+        "Transfert Stripe existant incoherent. Verification manuelle requise."
+      );
+    }
+
+    matches.push(transfer);
+
+    if (matches.length > 1) {
+      throw new Error(
+        "Plusieurs transferts Stripe detectes. Verification manuelle requise."
+      );
+    }
+  }
+
+  return matches[0] ?? null;
 }
+
 
 async function transferOne(
   transactionId: string
@@ -131,6 +183,11 @@ async function transferOne(
     };
   }
 
+  // Par defaut, le resultat financier reste incertain
+  // tant que la recherche des transferts existants
+  // n'a pas ete terminee.
+  let financialOutcomeUncertain = true;
+
   try {
     /*
      * Separate Charges and Transfers exige que le compte
@@ -140,20 +197,6 @@ async function transferOne(
      * d'argent : les snapshots locaux charges_enabled /
      * payouts_enabled ne remplacent pas cette capability.
      */
-    const connectedAccount =
-      await stripe.accounts.retrieve(
-        txn.stripe_account_id
-      );
-
-    if (
-      connectedAccount.capabilities
-        ?.transfers !== "active"
-    ) {
-      throw new Error(
-        "La capability Stripe transfers du club n'est pas active."
-      );
-    }
-
     const chargeId =
       await resolveChargeId(txn);
 
@@ -164,10 +207,77 @@ async function transferOne(
      */
     let transfer =
       await recoverExistingTransfer(
-        txn
+        txn,
+        chargeId
       );
 
+    const recovered = Boolean(transfer);
+
     if (!transfer) {
+      // Une ancienne tentative non retrouvee ne prouve
+      // pas qu'aucun transfert n'a ete execute.
+      assertTransferRetryWindow(txn);
+
+      // Seule une premiere tentative peut etre marquee
+      // failed avant tout appel de creation Stripe.
+      financialOutcomeUncertain =
+        txn.transfer_attempt_count !== 1;
+      const { data: club, error: clubError } = await supabaseAdmin
+        .from("clubs")
+        .select(`
+          stripe_account_id,
+          stripe_connection_type,
+          stripe_oauth_revoked_at,
+          stripe_charges_enabled,
+          stripe_payouts_enabled
+        `)
+        .eq("id", txn.club_id)
+        .single();
+
+      if (clubError) throw clubError;
+
+      if (!club || club.stripe_account_id !== txn.stripe_account_id) {
+        throw new Error(
+          "Le compte Stripe du club ne correspond plus a la transaction."
+        );
+      }
+
+      if (club.stripe_oauth_revoked_at) {
+        throw new Error(
+          "L'autorisation Stripe OAuth du club a ete revoquee."
+        );
+      }
+
+      if (
+        club.stripe_connection_type === "oauth" &&
+        (!club.stripe_charges_enabled || !club.stripe_payouts_enabled)
+      ) {
+        throw new Error(
+          "Le compte Stripe OAuth du club n'est pas operationnel."
+        );
+      }
+
+      const connectedAccount =
+        await stripe.accounts.retrieve(
+          txn.stripe_account_id
+        );
+
+      if (
+        connectedAccount.capabilities
+          ?.transfers !== "active"
+      ) {
+        throw new Error(
+          "La capability Stripe transfers du club n'est pas active."
+        );
+      }
+
+      // Revalidation juste avant l'appel financier.
+      assertTransferRetryWindow(txn);
+
+      // Une erreur apres cet instant ne prouve pas
+      // que Stripe n'a pas execute le transfert.
+      financialOutcomeUncertain = true;
+
       transfer =
         await stripe.transfers.create(
           {
@@ -236,26 +346,43 @@ async function transferOne(
       transferId:
         transfer.id,
 
-      recovered:
-        Boolean(
-          txn.stripe_transfer_id
-        ),
+      recovered,
 
       completed,
     };
   } catch (error) {
-    await supabaseAdmin.rpc(
-      "fail_payment_transfer",
-      {
-        p_transaction_id:
-          txn.id,
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Erreur Stripe inconnue";
 
-        p_error:
-          error instanceof Error
-            ? error.message
-            : "Erreur Stripe inconnue",
+    if (!financialOutcomeUncertain) {
+      const { error: failureError } =
+        await supabaseAdmin.rpc(
+          "fail_payment_transfer",
+          {
+            p_transaction_id: txn.id,
+            p_error: message,
+          }
+        );
+
+      if (failureError) {
+        console.error(
+          "Stripe Transfer: impossible de marquer la transaction failed",
+          { transactionId: txn.id }
+        );
       }
-    );
+    } else {
+      // Conserver processing : le prochain traitement
+      // devra rechercher le transfert avant toute reprise.
+      console.error(
+        "Stripe Transfer: reconciliation necessaire",
+        {
+          transactionId: txn.id,
+          message,
+        }
+      );
+    }
 
     throw error;
   }
@@ -284,7 +411,9 @@ export async function transferApprovedEvent(
         stripe_charge_id,
         stripe_transfer_id,
         transfer_group,
-        transfer_status
+        transfer_status,
+        transfer_first_requested_at,
+        transfer_attempt_count
       `)
       .eq(
         "event_id",
