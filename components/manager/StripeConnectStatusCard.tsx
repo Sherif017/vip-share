@@ -214,9 +214,9 @@ export default function StripeConnectStatusCard({
             </p>
           </div>
 
-          <div className={`grid gap-3 ${oauthEnabled && !pending ? "sm:grid-cols-2" : ""}`}>
+          <div className={`grid gap-3 ${oauthEnabled ? "sm:grid-cols-2" : ""}`}>
 
-            {oauthEnabled && !pending && (
+            {oauthEnabled && (
               <div className="flex flex-col rounded-xl border border-[#c6a76d]/40 bg-[#c6a76d]/[0.05] p-5">
                 <p className="mb-3 text-xs font-medium uppercase tracking-widest text-[#c6a76d]">
                   Compte existant
@@ -273,7 +273,7 @@ export default function StripeConnectStatusCard({
                 disabled={loading !== null}
                 onClick={() => handleActivate("express")}
                 className={
-                  pending || !oauthEnabled
+                  !oauthEnabled
                     ? "kre-primary-cta w-full rounded-full px-4 py-3 text-sm font-semibold disabled:opacity-50"
                     : "w-full rounded-full border border-[#c6a76d]/60 px-4 py-3 text-sm font-semibold text-[#c6a76d] transition hover:bg-[#c6a76d]/10 disabled:opacity-50"
                 }
@@ -286,18 +286,6 @@ export default function StripeConnectStatusCard({
               </button>
             </div>
 
-            {oauthEnabled && pending && (
-              <button
-                type="button"
-                disabled={loading !== null}
-                onClick={() => handleActivate("oauth")}
-                className="rounded-full border border-[#c6a76d]/30 px-4 py-3 text-sm font-medium text-[#c6a76d] transition hover:bg-[#c6a76d]/10 disabled:opacity-50"
-              >
-                {loading === "oauth"
-                  ? "Redirection..."
-                  : "Utiliser un compte Stripe existant ↗"}
-              </button>
-            )}
 
           </div>
 
