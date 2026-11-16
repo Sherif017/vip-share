@@ -157,6 +157,17 @@ test("4. URL Stripe OAuth correctement configuree", () => {
   assert.equal(url.searchParams.get("scope"), "read_write");
   assert.equal(url.searchParams.get("redirect_uri"), REDIRECT_URI);
   assert.equal(url.searchParams.get("state"), state);
+
+  // Compte existant : connexion + selection du compte, pas le
+  // formulaire d'inscription (defaut Stripe pour read_write).
+  assert.equal(url.searchParams.get("stripe_landing"), "login");
+  assert.equal(url.searchParams.get("always_prompt"), "true");
+
+  // Aucune donnee personnelle transmise dans l'URL.
+  assert.equal(
+    [...url.searchParams.keys()].some((key) => key.startsWith("stripe_user")),
+    false
+  );
 });
 
 test("5. OAuth desactive : creation URL interdite", () => {

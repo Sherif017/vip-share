@@ -35,6 +35,20 @@ export function createStripeOAuthUrl(state: string) {
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("state", state);
 
+  /*
+   * Parcours « J'ai déjà un compte Stripe ».
+   * Avec scope=read_write, Stripe affiche par défaut le formulaire
+   * d'inscription (stripe_landing=register), qui redemande secteur,
+   * site web, description... meme a un titulaire de compte existant.
+   * stripe_landing=login affiche la connexion puis la selection du
+   * compte existant ; la creation de compte reste accessible depuis
+   * cette page. always_prompt impose une selection explicite du compte.
+   * Ref. SDK stripe (OAuthAuthorizeUrlParams) et
+   * https://docs.stripe.com/connect/oauth-reference
+   */
+  url.searchParams.set("stripe_landing", "login");
+  url.searchParams.set("always_prompt", "true");
+
   return url.toString();
 }
 

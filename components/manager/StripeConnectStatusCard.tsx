@@ -226,9 +226,16 @@ export default function StripeConnectStatusCard({
                   J'ai déjà un compte Stripe
                 </h4>
 
-                <p className="mb-5 mt-2 flex-1 text-sm leading-relaxed text-zinc-400">
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">
                   Connectez votre compte Stripe existant
                   sans recommencer votre inscription.
+                </p>
+
+                <p className="mb-5 mt-2 flex-1 text-xs leading-relaxed text-zinc-500">
+                  Connectez-vous avec vos identifiants Stripe, puis
+                  sélectionnez votre compte. Un compte créé via une autre
+                  plateforme ne peut pas être partagé : Stripe vous
+                  proposera alors un compte dédié à K-RÉ.
                 </p>
 
                 <button
