@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
+import { FOREIGN_MODE_REFUND_ERROR, findForeignModeSessions } from "@/lib/stripe-mode";
 import { canManageVipOffer, getAdminAccess } from "@/lib/admin-access";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { dispatchRefundRequestedEmail, dispatchRefundCompletedEmail } from "@/lib/email/refund";
@@ -15,10 +16,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   const body = await request.json().catch(() => ({}));
   const reservation = await supabaseAdmin.from("reservations")
-    .select("id,user_id,vip_offer_id,deposit_paid,supplement_amount")
+    .select("id,user_id,vip_offer_id,deposit_paid,supplement_amount,stripe_checkout_session_id,stripe_supplement_session_id,supplement_stripe_session_id")
     .eq("id", id).maybeSingle();
   if (reservation.error || !reservation.data) return NextResponse.json({ error: "Réservation introuvable." }, { status: 404 });
   if (!(await canManageVipOffer(access, reservation.data.vip_offer_id))) return NextResponse.json({ error: "Accès interdit." }, { status: 403 });
+
+  // Refus avant toute ecriture (prepare_vip_refund) et tout email :
+  // un paiement TEST ne peut pas etre rembourse par un serveur LIVE.
+  if (findForeignModeSessions([
+    reservation.data.stripe_checkout_session_id,
+    reservation.data.stripe_supplement_session_id,
+    reservation.data.supplement_stripe_session_id,
+  ]).length > 0) {
+    return NextResponse.json({ error: FOREIGN_MODE_REFUND_ERROR }, { status: 409 });
+  }
 
   const prepared = await supabaseAdmin.rpc("prepare_vip_refund", {
     p_reservation_id: id, p_requested_by: access.userId,

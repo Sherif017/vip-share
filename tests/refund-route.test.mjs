@@ -8,6 +8,20 @@ const reservationId = "44444444-4444-4444-8444-444444444444";
 const userId = "11111111-1111-4111-8111-111111111111";
 const offerId = "22222222-2222-4222-8222-222222222222";
 
+function loadStripeMode(serverKey) {
+  const source = ts.transpileModule(
+    readFileSync("lib/stripe-mode.ts", "utf8"),
+    { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } },
+  ).outputText;
+  const loadedModule = { exports: {} };
+  runInNewContext(source, {
+    module: loadedModule,
+    exports: loadedModule.exports,
+    process: { env: serverKey === undefined ? {} : { STRIPE_SECRET_KEY: serverKey } },
+  });
+  return loadedModule.exports;
+}
+
 function loadRoute(harness) {
   const source = ts.transpileModule(
     readFileSync("app/api/admin/reservations/[id]/refund/route.ts", "utf8"),
@@ -21,6 +35,7 @@ function loadRoute(harness) {
     require(name) {
       if (name === "next/server") return nextServer;
       if (name === "@/lib/stripe") return { stripe: harness.stripe };
+      if (name === "@/lib/stripe-mode") return loadStripeMode(harness.serverKey);
       if (name === "@/lib/admin-access") return { getAdminAccess: harness.getAdminAccess, canManageVipOffer: harness.canManageVipOffer };
       if (name === "@/lib/supabase-admin") return { supabaseAdmin: harness.db };
       if (name === "@/lib/email/refund") return { dispatchRefundRequestedEmail: async () => {}, dispatchRefundCompletedEmail: async () => {} };
@@ -32,8 +47,8 @@ function loadRoute(harness) {
   return loadedModule.exports;
 }
 
-function harness({ paymentType = "initial_deposit", amount = 2500, metadata = {}, permitted = true, existingRefunds = [], rowStatus = "refund_pending" } = {}) {
-  const calls = { refund: [], rpc: [], fail: 0 };
+function harness({ paymentType = "initial_deposit", amount = 2500, metadata = {}, permitted = true, existingRefunds = [], rowStatus = "refund_pending", serverKey = "sk_test_synthetic", sessions = {} } = {}) {
+  const calls = { refund: [], rpc: [], fail: 0, retrieve: 0 };
   const session = {
     status: "complete",
     payment_status: "paid",
@@ -59,6 +74,7 @@ function harness({ paymentType = "initial_deposit", amount = 2500, metadata = {}
     vip_offer_id: offerId,
     deposit_paid: 25,
     supplement_amount: 600,
+    ...sessions,
   };
   const row = { id: "55555555-5555-4555-8555-555555555555", payment_type: paymentType, stripe_session_id: `cs_${paymentType}`, status: rowStatus };
   const db = {
@@ -81,7 +97,7 @@ function harness({ paymentType = "initial_deposit", amount = 2500, metadata = {}
     },
   };
   const stripe = {
-    checkout: { sessions: { retrieve: async () => session } },
+    checkout: { sessions: { retrieve: async () => { calls.retrieve += 1; return session; } } },
     refunds: {
       list: async () => ({ data: existingRefunds }),
       create: async (params, options) => {
@@ -90,6 +106,7 @@ function harness({ paymentType = "initial_deposit", amount = 2500, metadata = {}
     } },
   };
   const route = loadRoute({
+    serverKey,
     db,
     stripe,
     getAdminAccess: async () => ({ userId, isManager: true }),
@@ -170,4 +187,41 @@ test("an incompatible partial refund fails closed", async () => {
   assert.equal((await h.post()).status, 502);
   assert.equal(h.calls.refund.length, 0);
   assert.equal(h.calls.fail, 1);
+});
+
+// Separation TEST / LIVE : un ancien paiement TEST ne doit jamais
+// declencher d'ecriture, d'email ou d'appel Stripe sur un serveur LIVE.
+test("LIVE server refuses a TEST deposit session before any write or Stripe call", async () => {
+  const h = harness({ serverKey: "sk_live_synthetic", sessions: { stripe_checkout_session_id: "cs_test_old" } });
+  const response = await h.post();
+  assert.equal(response.status, 409);
+  assert.match((await response.json()).error, /autre mode Stripe/);
+  assert.deepEqual(h.calls.rpc, []);
+  assert.equal(h.calls.retrieve, 0);
+  assert.equal(h.calls.refund.length, 0);
+});
+
+test("LIVE server refuses a TEST supplement session (both column names)", async () => {
+  for (const column of ["stripe_supplement_session_id", "supplement_stripe_session_id"]) {
+    const h = harness({ serverKey: "sk_live_synthetic", sessions: { stripe_checkout_session_id: "cs_live_new", [column]: "cs_test_old" } });
+    assert.equal((await h.post()).status, 409, column);
+    assert.deepEqual(h.calls.rpc, []);
+  }
+});
+
+test("TEST server refuses a LIVE session (Preview/local cannot touch real payments)", async () => {
+  const h = harness({ serverKey: "sk_test_synthetic", sessions: { stripe_checkout_session_id: "cs_live_real" } });
+  assert.equal((await h.post()).status, 409);
+  assert.deepEqual(h.calls.rpc, []);
+});
+
+test("LIVE server still refunds a LIVE session normally", async () => {
+  const h = harness({ serverKey: "sk_live_synthetic", sessions: { stripe_checkout_session_id: "cs_live_new" } });
+  assert.equal((await h.post()).status, 200);
+  assert.equal(h.calls.refund[0].params.amount, 2500);
+});
+
+test("TEST server still refunds a TEST session normally", async () => {
+  const h = harness({ serverKey: "sk_test_synthetic", sessions: { stripe_checkout_session_id: "cs_test_x" } });
+  assert.equal((await h.post()).status, 200);
 });

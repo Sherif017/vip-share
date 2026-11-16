@@ -27,7 +27,7 @@ function load(path, dependencies, clock) {
     URL, Response, Request, setTimeout,
     Date: class extends Date { static now() { return clock.now; } },
     console: { error() {}, info() {} },
-    process: { env: { STRIPE_WEBHOOK_SECRET: 'synthetic-webhook-secret' } },
+    process: { env: { STRIPE_WEBHOOK_SECRET: 'synthetic-webhook-secret', STRIPE_SECRET_KEY: 'sk_test_synthetic' } },
   }, { filename: path });
   return loadedModule.exports;
 }
@@ -116,7 +116,7 @@ function harness() {
   const deliver = async (type, overrides = {}) => {
     const session = clone(sessions.values().next().value);
     Object.assign(session, overrides);
-    const payload = JSON.stringify({ id: 'evt_synthetic', type, data: { object: session } });
+    const payload = JSON.stringify({ id: 'evt_synthetic', livemode: false, type, data: { object: session } });
     const signature = sdk.webhooks.generateTestHeaderString({ payload, secret: 'synthetic-webhook-secret' });
     return webhook.POST(new Request('http://localhost/api/stripe/webhook', { method: 'POST', body: payload, headers: { 'stripe-signature': signature } }));
   };

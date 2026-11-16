@@ -724,6 +724,35 @@ export async function POST(
     );
   }
 
+  /*
+   * Separation TEST / LIVE, verifiee avant tout traitement metier.
+   * Le mode du serveur est deduit de STRIPE_SECRET_KEY.
+   * - Cle de mode inconnu : 500 pour que Stripe rejoue l'evenement
+   *   une fois la configuration corrigee (aucun paiement perdu).
+   * - Evenement d'un autre mode : 200 ignore, il ne sera jamais
+   *   valide sur ce serveur et ne doit pas etre rejoue.
+   */
+  const stripeKey = process.env.STRIPE_SECRET_KEY ?? "";
+  const serverLiveMode = /^(sk|rk)_live_/.test(stripeKey);
+  const serverTestMode = /^(sk|rk)_test_/.test(stripeKey);
+
+  if (!serverLiveMode && !serverTestMode) {
+    console.error("Webhook Stripe : mode de STRIPE_SECRET_KEY inconnu.");
+    return NextResponse.json(
+      { error: "Webhook Stripe non configuré." },
+      { status: 500 }
+    );
+  }
+
+  if (event.livemode !== serverLiveMode) {
+    console.error("Webhook Stripe : evenement d'un autre mode ignore", {
+      eventId: event.id,
+      eventLivemode: event.livemode,
+      serverLivemode: serverLiveMode,
+    });
+    return NextResponse.json({ received: true, ignored: true });
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {

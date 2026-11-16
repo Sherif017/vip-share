@@ -19,6 +19,11 @@ import {
 } from "@/lib/full-payment-refund";
 
 import {
+  FOREIGN_MODE_REFUND_ERROR,
+  findForeignModeSessions,
+} from "@/lib/stripe-mode";
+
+import {
   dispatchRefundRequestedEmail,
   dispatchRefundCompletedEmail,
 } from "@/lib/email/refund";
@@ -121,6 +126,48 @@ export async function POST(
         },
         {
           status: 403,
+        }
+      );
+    }
+
+
+    /*
+     * Separation TEST / LIVE : refus avant
+     * toute ecriture (prepare_full_payment_refunds),
+     * tout email et tout appel Stripe.
+     */
+    const {
+      data: modeCheck,
+      error: modeCheckError,
+    } =
+      await supabaseAdmin
+        .from("reservations")
+        .select(
+          "stripe_checkout_session_id,stripe_supplement_session_id,supplement_stripe_session_id"
+        )
+        .eq("id", id)
+        .maybeSingle();
+
+    if (modeCheckError) {
+      throw modeCheckError;
+    }
+
+    if (
+      modeCheck &&
+      findForeignModeSessions([
+        modeCheck.stripe_checkout_session_id,
+        modeCheck.stripe_supplement_session_id,
+        modeCheck.supplement_stripe_session_id,
+      ]).length > 0
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            FOREIGN_MODE_REFUND_ERROR,
+        },
+        {
+          status: 409,
         }
       );
     }
