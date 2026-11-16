@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { useRouter } from "next/navigation";
+import { compressImage } from "@/lib/compress-image";
 
 type Club = {
   id: string;
@@ -423,14 +424,14 @@ export default function NewEventForm({
       if (posterFile) {
         formData.append(
           "poster",
-          posterFile
+          await compressImage(posterFile)
         );
       }
 
       if (mapFile) {
         formData.append(
           "tableMap",
-          mapFile
+          await compressImage(mapFile)
         );
       }
 
@@ -443,8 +444,23 @@ export default function NewEventForm({
           }
         );
 
-      const result =
-        await response.json();
+      if (response.status === 413) {
+        throw new Error(
+          "Les images sont trop volumineuses. Essaie des fichiers plus légers."
+        );
+      }
+
+      let result;
+
+      try {
+        result = await response.json();
+      } catch {
+        throw new Error(
+          response.ok
+            ? "Réponse inattendue. Vérifie tes soirées avant de réessayer."
+            : `Erreur du serveur (${response.status}). Réessaie dans quelques instants.`
+        );
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -695,8 +711,7 @@ export default function NewEventForm({
 
         <p className="mt-5 text-xs text-zinc-600">
           Formats acceptés : JPG, PNG
-          et WebP. Maximum 8 Mo par
-          image.
+          et WebP. Compression automatique des images.
         </p>
       </section>
 
