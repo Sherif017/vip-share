@@ -4,7 +4,7 @@
 
 K-RÉ is a marketplace that lets people book **individual seats at a shared VIP table** in partner nightclubs. Customers pay only for their seats; clubs fill tables that would otherwise stay empty.
 
-**Status:** MVP, pre-launch (Paris).
+**Status:** MVP, pre-launch (Paris) · **Live:** [vip-share-lipv.vercel.app](https://vip-share-lipv.vercel.app)
 
 ---
 
